@@ -1,10 +1,10 @@
 #include "VecBoard.h"
-
+#include "Move.h"
 #include <iostream>
 
 using namespace std;
 
-VecBoard::VecBoard() {
+VecBoard::VecBoard(): turn(1) {
     board.resize(BOARD_SIZE, vector<Piece>(BOARD_SIZE, Piece(EMPTY, 0, 0)));
 
     for (int i = 0; i < BOARD_SIZE; i++) {
@@ -12,26 +12,26 @@ VecBoard::VecBoard() {
         board[6][i] = Piece(PAWN, 0, 1);
     }
 
-    board[0][0] = Piece(ROOK, 1, 5);
-    board[0][7] = Piece(ROOK, 1, 5);
-    board[7][0] = Piece(ROOK, 0, 5);
-    board[7][7] = Piece(ROOK, 0, 5);
+    board[0][0] = Piece(ROOK, -1, 5);
+    board[0][7] = Piece(ROOK, -1, 5);
+    board[7][0] = Piece(ROOK, 1, 5);
+    board[7][7] = Piece(ROOK, 1, 5);
 
-    board[0][1] = Piece(KNIGHT, 1, 3);
-    board[0][6] = Piece(KNIGHT, 1, 3);
-    board[7][1] = Piece(KNIGHT, 0, 3);
-    board[7][6] = Piece(KNIGHT, 0, 3);
+    board[0][1] = Piece(KNIGHT, -1, 3);
+    board[0][6] = Piece(KNIGHT, -1, 3);
+    board[7][1] = Piece(KNIGHT, 1, 3);
+    board[7][6] = Piece(KNIGHT, 1, 3);
 
-    board[0][2] = Piece(BISHOP, 1, 3);
-    board[0][5] = Piece(BISHOP, 1, 3);
-    board[7][2] = Piece(BISHOP, 0, 3);
-    board[7][5] = Piece(BISHOP, 0, 3);
+    board[0][2] = Piece(BISHOP, -1, 3);
+    board[0][5] = Piece(BISHOP, -1, 3);
+    board[7][2] = Piece(BISHOP, 1, 3);
+    board[7][5] = Piece(BISHOP, 1, 3);
 
-    board[0][3] = Piece(QUEEN, 1, 9);
-    board[7][3] = Piece(QUEEN, 0, 9);
+    board[0][3] = Piece(QUEEN, -1, 9);
+    board[7][3] = Piece(QUEEN, 1, 9);
 
-    board[0][4] = Piece(KING, 1, 100);
-    board[7][4] = Piece(KING, 0, 100);
+    board[0][4] = Piece(KING, -1, 100);
+    board[7][4] = Piece(KING, 1, 100);
 }
 
 void VecBoard::forceMove(int fromX, int fromY, int toX, int toY) {
@@ -41,21 +41,23 @@ void VecBoard::forceMove(int fromX, int fromY, int toX, int toY) {
 
 void VecBoard::move(int fromX, int fromY, int toX, int toY) {
     if (board[fromX][fromY].type == EMPTY) {
-        invalid_argument("MoveError: Attempting to move from an empty square\n");
+        throw invalid_argument("MoveError: Attempting to move from an empty square\n");
         return;
     }
-    if (board[fromX][fromY].isWhite != isWhiteTurn) {
-        invalid_argument("MoveError: Attempting to move the wrong color piece\n");
+    if (board[fromX][fromY].color != turn) {
+        throw invalid_argument("MoveError: Attempting to move the wrong color piece\n");
         return;
     }
-    if (board[toX][toY].isWhite == isWhiteTurn) {
-        invalid_argument("MoveError: Attempting to capture your own piece\n");
+    if (board[toX][toY].color == turn) {
+        throw invalid_argument("MoveError: Attempting to capture your own piece\n");
         return;
     }
-    // Check if move is valid using the function from the Move class
-    // checkMove(fromX, fromY, toX, toY);
+    if (!checkMove(fromX, fromY, toX, toY)) {
+        throw invalid_argument("MoveError: Invalid move\n");
+        return;
+    }
     forceMove(fromX, fromY, toX, toY);
-    isWhiteTurn = !isWhiteTurn;
+    turn = !turn;
 }
 
 void VecBoard::printBoard() {
@@ -68,37 +70,37 @@ void VecBoard::printBoard() {
                     symbol = ".";
                     break;
                 case PAWN:
-                    if (board[i][j].isWhite)
+                    if (board[i][j].color == -1)
                         symbol = 'p';
                     else
                         symbol = 'P';
                     break;
                 case ROOK:
-                    if (board[i][j].isWhite)
+                    if (board[i][j].color == -1)
                         symbol = 'r';
                     else
                         symbol = 'R';
                     break;
                 case KNIGHT:
-                    if (board[i][j].isWhite)
+                    if (board[i][j].color == -1)
                         symbol = 'n';
                     else
                         symbol = 'N';
                     break;
                 case BISHOP:
-                    if (board[i][j].isWhite)
+                    if (board[i][j].color == -1)
                         symbol = 'b';
                     else
                         symbol = 'B';
                     break;
                 case QUEEN:
-                    if (board[i][j].isWhite)
+                    if (board[i][j].color == -1)
                         symbol = 'q';
                     else
                         symbol = 'Q';
                     break;
                 case KING:
-                    if (board[i][j].isWhite)
+                    if (board[i][j].color == 1)
                         symbol = 'k';
                     else
                         symbol = 'K';

@@ -1,5 +1,9 @@
 #include "Move.h"
 
+bool checkMove(int fromX, int fromY, int toX, int toY) {
+    return true;
+}
+
 std::vector<std::pair<int, int>> Move::getValidMoves(Piece piece, int x, int y) {
     std::vector<std::pair<int, int>> moves;
     int dxKnight[] = {-2, -1, 1, 2, 2, 1, -1, -2};
@@ -72,7 +76,7 @@ std::vector<std::pair<int, int>> Move::getValidMoves(Piece piece, int x, int y) 
             }
             break;
         case PAWN:
-            if (piece.isWhite) {
+            if (piece.color) {
                 if (isValidPosition(x, y + 1)) {
                     moves.push_back({x, y + 1});
                 }

@@ -13,9 +13,9 @@ enum PieceType {
 
 struct Piece {
     PieceType type;
-    int isWhite;
+    int color;
     int value;
-    Piece(PieceType type, bool isWhite, int value) : type(type), isWhite(isWhite), value(value) {}
+    Piece(PieceType type, int color, int value) : type(type), color(color), value(value) {}
 };
 
 #endif

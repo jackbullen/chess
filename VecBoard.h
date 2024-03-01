@@ -7,7 +7,7 @@ class VecBoard {
 public:
     VecBoard();
     vector< std::vector<Piece> > board;
-    bool isWhiteTurn;
+    int turn;
 
     // Constants
     static constexpr int BOARD_SIZE = 8;
