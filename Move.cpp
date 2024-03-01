@@ -5,6 +5,8 @@ std::vector<std::pair<int, int>> Move::getValidMoves(Piece piece, int x, int y) 
     int dxKnight[] = {-2, -1, 1, 2, 2, 1, -1, -2};
     int dyKnight[] = {1, 2, 2, 1, -1, -2, -2, -1};
     switch (piece.type) {
+        case EMPTY:
+            break;
         case KING:
             for (int i = -1; i <= 1; i++) {
                 for (int j = -1; j <= 1; j++) {

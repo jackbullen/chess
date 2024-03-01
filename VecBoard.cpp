@@ -1,37 +1,62 @@
 #include "VecBoard.h"
+
 #include <iostream>
 
 using namespace std;
 
 VecBoard::VecBoard() {
-        board.resize(BOARD_SIZE, vector<Piece>(BOARD_SIZE, Piece(EMPTY, 0, 0)));
+    board.resize(BOARD_SIZE, vector<Piece>(BOARD_SIZE, Piece(EMPTY, 0, 0)));
 
-        for (int i = 0; i < BOARD_SIZE; i++) {
-            board[1][i] = Piece(PAWN, 1, 1);
-            board[6][i] = Piece(PAWN, 0, 1);
-        }
-
-        board[0][0] = Piece(ROOK, 1, 5);
-        board[0][7] = Piece(ROOK, 1, 5);
-        board[7][0] = Piece(ROOK, 0, 5);
-        board[7][7] = Piece(ROOK, 0, 5);
-
-        board[0][1] = Piece(KNIGHT, 1, 3);
-        board[0][6] = Piece(KNIGHT, 1, 3);
-        board[7][1] = Piece(KNIGHT, 0, 3);
-        board[7][6] = Piece(KNIGHT, 0, 3);
-
-        board[0][2] = Piece(BISHOP, 1, 3);
-        board[0][5] = Piece(BISHOP, 1, 3);
-        board[7][2] = Piece(BISHOP, 0, 3);
-        board[7][5] = Piece(BISHOP, 0, 3);
-
-        board[0][3] = Piece(QUEEN, 1, 9);
-        board[7][3] = Piece(QUEEN, 0, 9);
-        
-        board[0][4] = Piece(KING, 1, 100);
-        board[7][4] = Piece(KING, 0, 100);
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        board[1][i] = Piece(PAWN, 1, 1);
+        board[6][i] = Piece(PAWN, 0, 1);
     }
+
+    board[0][0] = Piece(ROOK, 1, 5);
+    board[0][7] = Piece(ROOK, 1, 5);
+    board[7][0] = Piece(ROOK, 0, 5);
+    board[7][7] = Piece(ROOK, 0, 5);
+
+    board[0][1] = Piece(KNIGHT, 1, 3);
+    board[0][6] = Piece(KNIGHT, 1, 3);
+    board[7][1] = Piece(KNIGHT, 0, 3);
+    board[7][6] = Piece(KNIGHT, 0, 3);
+
+    board[0][2] = Piece(BISHOP, 1, 3);
+    board[0][5] = Piece(BISHOP, 1, 3);
+    board[7][2] = Piece(BISHOP, 0, 3);
+    board[7][5] = Piece(BISHOP, 0, 3);
+
+    board[0][3] = Piece(QUEEN, 1, 9);
+    board[7][3] = Piece(QUEEN, 0, 9);
+
+    board[0][4] = Piece(KING, 1, 100);
+    board[7][4] = Piece(KING, 0, 100);
+}
+
+void VecBoard::forceMove(int fromX, int fromY, int toX, int toY) {
+    board[toX][toY] = board[fromX][fromY];
+    board[fromX][fromY] = Piece(EMPTY, 0, 0);
+}
+
+void VecBoard::move(int fromX, int fromY, int toX, int toY) {
+    if (board[fromX][fromY].type == EMPTY) {
+        invalid_argument("MoveError: Attempting to move from an empty square\n");
+        return;
+    }
+    if (board[fromX][fromY].isWhite != isWhiteTurn) {
+        invalid_argument("MoveError: Attempting to move the wrong color piece\n");
+        return;
+    }
+    if (board[toX][toY].isWhite == isWhiteTurn) {
+        invalid_argument("MoveError: Attempting to capture your own piece\n");
+        return;
+    }
+    // Check if move is valid using the function from the Move class
+    // checkMove(fromX, fromY, toX, toY);
+    forceMove(fromX, fromY, toX, toY);
+    isWhiteTurn = !isWhiteTurn;
+}
 
 void VecBoard::printBoard() {
     cout << endl;

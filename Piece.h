@@ -1,3 +1,6 @@
+#ifndef PIECE_H
+#define PIECE_H
+
 enum PieceType {
     EMPTY,
     KING,
@@ -14,3 +17,5 @@ struct Piece {
     int value;
     Piece(PieceType type, bool isWhite, int value) : type(type), isWhite(isWhite), value(value) {}
 };
+
+#endif
