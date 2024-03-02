@@ -8,7 +8,7 @@ class GameBoard {
    public:
     GameBoard();
     void move(string san);
-    void printBoard();
+    void print();
     Piece getPiece(int x, int y);
     string loc(int x, int y);
     map<PieceType, string> pieceTypeNameMap;

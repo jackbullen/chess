@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+using namespace std;
+
 GameBoard::GameBoard() {
     pieceTypeNameMap = {
         {PAWN, "Pawn"},
@@ -22,12 +24,12 @@ GameBoard::GameBoard() {
         {'h', 7}};
 }
 
-void GameBoard::move(std::string sanMove) {
+void GameBoard::move(string sanMove) {
     // TODO: Implement SAN parsing and move logic
 }
 
-void GameBoard::printBoard() {
-    vecBoard.printBoard();
+void GameBoard::print() {
+    vecBoard.print();
 }
 
 Piece GameBoard::getPiece(int x, int y) {

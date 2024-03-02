@@ -1,8 +1,10 @@
 #include "VecBoard.h"
 
+using namespace std;
+
 struct BoardState {
     VecBoard board;
-    std::vector< std::vector<bool> > pawnMoves;
-    std::vector< std::vector<bool> > castleWhite;
-    std::vector< std::vector<bool> > castleBlack;
+    vector< vector<bool> > pawnMoves;
+    vector< vector<bool> > castleWhite;
+    vector< vector<bool> > castleBlack;
 };

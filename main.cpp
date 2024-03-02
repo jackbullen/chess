@@ -1,16 +1,14 @@
 #include <iostream>
 #include "GameBoard.h"
-#include "Move.h"
+#include "PGNReader.h"
 
 using namespace std;
 
 int main() {
-    // GameBoard game;
-    // game.printBoard();
-
-    VecBoard board;
-    board.move(7, 7, 3, 3);
-    board.printBoard();
+    PGNReader reader("games.pgn");
+    PGNReader::Game game = reader.parseGame();
+    VecBoard board = reader.createBoard(game);
+    board.print();
 
     return 0;
 }

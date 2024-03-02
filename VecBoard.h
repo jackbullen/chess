@@ -1,3 +1,6 @@
+#ifndef VECBOARD_H
+#define VECBOARD_H
+
 #include <vector>
 #include "Piece.h"
 
@@ -5,26 +8,29 @@ using namespace std;
 
 class VecBoard {
 public:
+    
     VecBoard();
-    vector< std::vector<Piece> > board;
+    vector< vector<Piece> > board;
     int turn;
-
-    // Constants
-    static constexpr int BOARD_SIZE = 8;
+    static const int BOARD_SIZE;
 
     // VecBoard operations
+    void start();
     void forceMove(int fromX, int fromY, int toX, int toY);
     void move(int fromX, int fromY, int toX, int toY);
-    // void move(string sanMove);
-    // void move(Move move);
-    // void move(vector<Move> moves);
-    // void move(vector<string> sanMoves);
+    bool checkMove(int fromX, int fromY, int toX, int toY);
+    bool isMoveInBounds(int x, int y);
+    vector<pair<int, int>> getValidMoves(int x, int y);
+    bool isBlocked(int fromX, int fromY, int toX, int toY);
 
     // VecBoard utils
-    void printBoard();
+    pair< pair<int, int>, pair<int, int> > sanToIndices(const string& san);
+    void print();
 
     Piece getPiece(int x, int y) const {
         return board[x][y];
     }
 
 };
+
+#endif
