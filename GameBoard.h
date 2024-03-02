@@ -1,3 +1,6 @@
+#ifndef GAMEBOARD_H
+#define GAMEBOARD_H
+
 #include <map>
 
 #include "VecBoard.h"
@@ -17,3 +20,5 @@ class GameBoard {
    private:
     VecBoard vecBoard;
 };
+
+#endif

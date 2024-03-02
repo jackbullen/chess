@@ -7,7 +7,7 @@ using namespace std;
 int main() {
     PGNReader reader("games.pgn");
     PGNReader::Game game = reader.parseGame();
-    VecBoard board = reader.createBoard(game);
+    GameBoard board = reader.createBoard(game);
     board.print();
 
     return 0;

@@ -25,7 +25,10 @@ GameBoard::GameBoard() {
 }
 
 void GameBoard::move(string sanMove) {
-    // TODO: Implement SAN parsing and move logic
+    pair<pair<int, int>, pair<int, int>> indices = vecBoard.sanToIndices(sanMove);
+    pair<int, int> from = indices.first;
+    pair<int, int> to = indices.second;
+    vecBoard.move(from.first, from.second, to.first, to.second);
 }
 
 void GameBoard::print() {

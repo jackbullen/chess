@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iostream>
 #include "VecBoard.h"
+#include "GameBoard.h"
 
 using namespace std;
 
@@ -26,7 +27,7 @@ public:
 
     PGNReader(const string& filename);
     Game parseGame();
-    VecBoard createBoard(const Game& game);
+    GameBoard createBoard(const Game& game);
 
 private:
     ifstream file;

@@ -59,20 +59,15 @@ PGNReader::Game PGNReader::parseGame() {
     return game;
 }
 
-VecBoard PGNReader::createBoard(const Game& game) {
-    VecBoard board;
-    board.start();
-
+GameBoard PGNReader::createBoard(const Game& game) {
+    GameBoard board;
+    board.print();
     for (const auto& move : game.moves) {
         if (std::all_of(move.begin(), move.end(), ::isdigit)) {
-            cout << move << ".";
             continue;
         }
-
-        pair<pair<int, int>, pair<int, int> > indices = board.sanToIndices(move);
-        cout << "san = " << move << " " << indices.first.first << " " << indices.first.second << " " << indices.second.first << " " << indices.second.second << endl;
+        board.move(move);
         board.print();
     }
-
     return board;
 }

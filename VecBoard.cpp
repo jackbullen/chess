@@ -46,15 +46,15 @@ void VecBoard::forceMove(int fromX, int fromY, int toX, int toY) {
 void VecBoard::move(int fromX, int fromY, int toX, int toY) {
     // Handles moving of pieces by checking for validity and calling forceMove
     if (board[fromX][fromY].type == EMPTY) {
-        throw invalid_argument("MoveError: Attempting to move from an empty square\n");
+        throw invalid_argument("MoveError: AtcurrPieceting to move from an empty square\n");
         return;
     }
     if (board[fromX][fromY].color != turn) {
-        throw invalid_argument("MoveError: Attempting to move the wrong color piece\n");
+        throw invalid_argument("MoveError: AtcurrPieceting to move the wrong color piece\n");
         return;
     }
     if (board[toX][toY].color == turn) {
-        throw invalid_argument("MoveError: Attempting to capture your own piece\n");
+        throw invalid_argument("MoveError: AtcurrPieceting to capture your own piece\n");
         return;
     }
     if (!checkMove(fromX, fromY, toX, toY)) {
@@ -194,7 +194,6 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
             }
             break;
         case ROOK:
-            // Check in all four directions until you hit the edge of the board or another piece
             for (int dx = -1; dx <= 1; dx += 2) {
                 for (int dy = -1; dy <= 1; dy += 2) {
                     int newX = x + dx;
@@ -208,8 +207,6 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
             }
             break;
         case BISHOP:
-            // Handle bishop move logic
-            // Add debug printing
             for (int dx = -1; dx <= 1; dx += 2) {
                 for (int dy = -1; dy <= 1; dy += 2) {
                     int newX = x + dx;
@@ -225,7 +222,6 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
 
             break;
         case QUEEN:
-            // Check in all eight directions until you hit the edge of the board or another piece
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dy = -1; dy <= 1; dy++) {
                     if (dx == 0 && dy == 0) {
@@ -333,15 +329,10 @@ void VecBoard::print() {
 
 pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& san) {
     map<char, int> file_to_col = {{'a', 0}, {'b', 1}, {'c', 2}, {'d', 3}, {'e', 4}, {'f', 5}, {'g', 6}, {'h', 7}};
-    char piece = san[0];
     int destRow = 8 - (san[san.length() - 1] - '0');
     int destCol = file_to_col[san[san.length() - 2]];
-    // cout << "Piece: " << piece << endl;
-    // cout << "destRow: " << destRow << endl;
-    // cout << "destCol: " << destCol << endl;
 
-    map<char, PieceType> charToPieceType = {{'r', ROOK}, {'n', KNIGHT}, {'b', BISHOP}, {'q', QUEEN}, {'k', KING},
-                                        {'R', ROOK}, {'N', KNIGHT}, {'B', BISHOP}, {'Q', QUEEN}, {'K', KING}};
+    map<char, PieceType> charToPieceType = {{'r', ROOK}, {'n', KNIGHT}, {'b', BISHOP}, {'q', QUEEN}, {'k', KING}, {'R', ROOK}, {'N', KNIGHT}, {'B', BISHOP}, {'Q', QUEEN}, {'K', KING}};
 
     if (san == "O-O") {
         if (turn == 1) {
@@ -359,23 +350,51 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& san) {
 
     // If san length is 2, then it's a pawn move: e5, d4, g3, ...
     if (san.length() == 2) {
-        cout << endl << endl << "# 2 letter" <<  endl;
-    } 
-    
+        cout << endl
+             << endl
+             << "# 2 letter" << endl;
+        cout << "destRow: " << destRow << endl;
+        cout << "destCol: " << destCol << endl;
+        if (turn == 1) {
+            for (int k = destRow; k < 8; k++) {
+                Piece currPiece = board[k][destCol];
+                if (currPiece.type == PAWN && currPiece.color == turn) {
+                    int fromRow = k;
+                    int fromCol = destCol;
+                    cout << "fromRow: " << fromRow << endl;
+                    cout << "fromCol: " << fromCol << endl;
+                    return make_pair(make_pair(fromRow, fromCol), make_pair(destRow, destCol));
+                    break;
+                }
+            }
+        } else {
+            for (int k = destRow; k >= 0; k--) {
+                Piece currPiece = board[k][destCol];
+                if (currPiece.type == PAWN && currPiece.color == turn) {
+                    int fromRow = k;
+                    int fromCol = destCol;
+                    cout << "fromRow: " << fromRow << endl;
+                    cout << "fromCol: " << fromCol << endl;
+                    return make_pair(make_pair(fromRow, fromCol), make_pair(destRow, destCol));
+                    break;
+                }
+            }
+        }
+    }
+
     // If san length is 3, then it's a piece move: Nf3, Bb5, ...
     else if (san.length() == 3) {
-        cout << endl << endl << "# 3 letter" << endl;
+        cout << endl
+             << endl
+             << "# 3 letter" << endl;
     }
 
     // If san length is 4, then it's a capture: Nxf3, Bxb5 or ambiguous move: Nbd7, R1e2, or pawn promotion: e8=Q, or
     else if (san.length() == 4) {
-        cout << endl << endl << "# 4 letter" << endl;
+        cout << endl
+             << endl
+             << "# 4 letter" << endl;
     }
-
-    
-    
-
-
 
     // for (int i = 0; i < 8; ++i) {
     //     for (int j = 0; j < 8; ++j) {
