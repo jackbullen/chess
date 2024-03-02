@@ -1,16 +1,17 @@
 // PGNReader.h
+#include <fstream>
+#include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include "VecBoard.h"
+
 #include "GameBoard.h"
+#include "VecBoard.h"
 
 using namespace std;
 
 class PGNReader {
-public:
+   public:
     struct Game {
         string event;
         string site;
@@ -29,6 +30,6 @@ public:
     Game parseGame();
     GameBoard createBoard(const Game& game);
 
-private:
+   private:
     ifstream file;
 };

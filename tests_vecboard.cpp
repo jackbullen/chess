@@ -1,5 +1,6 @@
-#include "VecBoard.h"
 #include <gtest/gtest.h>
+
+#include "VecBoard.h"
 
 TEST(VecBoardTest, ConstructorTest) {
     VecBoard board;
@@ -39,7 +40,7 @@ TEST(VecBoardTest, GetPieceTest) {
     ASSERT_EQ(piece.type, PieceType::EMPTY);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
