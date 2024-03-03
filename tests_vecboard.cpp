@@ -18,6 +18,7 @@ TEST(VecBoardTest, MoveInBoundsTest) {
     ASSERT_FALSE(board.isMoveInBounds(0, -1));
     ASSERT_FALSE(board.isMoveInBounds(VecBoard::BOARD_SIZE, 0));
     ASSERT_FALSE(board.isMoveInBounds(0, VecBoard::BOARD_SIZE));
+    ASSERT_TRUE(board.isMoveInBounds(0, VecBoard::BOARD_SIZE-1));
 }
 
 TEST(VecBoardTest, MoveTest) {
