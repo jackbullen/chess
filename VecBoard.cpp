@@ -4,7 +4,7 @@
 #include <map>
 
 using namespace std;
-
+const int verbose = 0;
 const int VecBoard::BOARD_SIZE = 8;
 
 VecBoard::VecBoard() : turn(1) {
@@ -14,6 +14,11 @@ VecBoard::VecBoard() : turn(1) {
 void VecBoard::start() {
     // Sets the board to the starting position
     board.resize(BOARD_SIZE, vector<Piece>(BOARD_SIZE, Piece(EMPTY, 0, 0)));
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            board[i][j] = Piece(EMPTY, 0, 0);
+        }
+    }
     for (int i = 0; i < BOARD_SIZE; i++) {
         board[1][i] = Piece(PAWN, -1, 1);
         board[6][i] = Piece(PAWN, 1, 1);
@@ -46,22 +51,32 @@ void VecBoard::forceMove(int fromX, int fromY, int toX, int toY) {
 void VecBoard::move(int fromX, int fromY, int toX, int toY) {
     // Handles moving of pieces by checking for validity and calling forceMove
     if (board[fromX][fromY].type == EMPTY) {
-        throw invalid_argument("MoveError: AtcurrPieceting to move from an empty square\n");
+        throw invalid_argument("MoveError: move from an empty square\n");
         return;
     }
     if (board[fromX][fromY].color != turn) {
-        throw invalid_argument("MoveError: AtcurrPieceting to move the wrong color piece\n");
+        throw invalid_argument("MoveError: move the wrong color piece\n");
         return;
     }
     if (board[toX][toY].color == turn) {
-        throw invalid_argument("MoveError: AtcurrPieceting to capture your own piece\n");
+        throw invalid_argument("MoveError: capture your own piece\n");
         return;
     }
     if (!checkMove(fromX, fromY, toX, toY)) {
         // TODO: Better exception handling for checkMove returning false.
         //       Could throw better exception inside checkMove
-        throw invalid_argument("MoveError: Invalid move\n");
+        throw invalid_argument("MoveError: checkMove returned false\n");
         return;
+    }
+    if (board[fromX][fromY].type == KING && abs(fromY - toY) == 2) {
+        // If castling, also move the rook
+        if (toY > fromY) {
+            // Kingside
+            forceMove(fromX, 7, fromX, toY - 1);
+        } else {
+            // Queenside
+            forceMove(fromX, 0, fromX, toY + 1);
+        }
     }
     forceMove(fromX, fromY, toX, toY);
     if (turn == 1) {
@@ -194,28 +209,45 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
             }
             break;
         case ROOK:
-            for (int dx = -1; dx <= 1; dx += 2) {
-                for (int dy = -1; dy <= 1; dy += 2) {
-                    int newX = x + dx;
-                    int newY = y + dy;
-                    while (isMoveInBounds(newX, newY)) {
-                        moves.push_back({newX, newY});
-                        newX += dx;
-                        newY += dy;
+            if (verbose) {
+                cout << "ROOK at (x, y): " << x << ", " << y << endl;
+            }
+            for (auto direction : vector<pair<int, int>>{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}) {
+                int dx = direction.first;
+                int dy = direction.second;
+                if (verbose) {
+                    cout << "dy, dx: " << dy << " " << dx << endl;
+                }
+                int newX = x + dx;
+                int newY = y + dy;
+                while (isMoveInBounds(newX, newY)) {
+                    if (verbose) {
+                        cout << "Possible move: " << newX << ", " << newY << endl;
                     }
+                    moves.push_back({newX, newY});
+                    newX += dx;
+                    newY += dy;
                 }
             }
+
             break;
         case BISHOP:
+            if (verbose) {
+                cout << "BISHOP at (x, y): " << x << ", " << y << endl;
+            }
             for (int dx = -1; dx <= 1; dx += 2) {
                 for (int dy = -1; dy <= 1; dy += 2) {
+                    // cout << "\ndx:" << dx << " dy:" << dy << endl;
                     int newX = x + dx;
                     int newY = y + dy;
+                    // cout << "new while";
 
                     while (isMoveInBounds(newX, newY) && board[newX][newY].color != piece.color) {
+                        // cout << "Possible move: " << newX << ", " << newY << endl;
                         moves.push_back({newX, newY});
                         newX += dx;
                         newY += dy;
+                        // cout << "newX, newY: " << newX << ", " << newY << endl;
                     }
                 }
             }
@@ -327,13 +359,28 @@ void VecBoard::print() {
     cout << endl;
 }
 
-pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& san) {
-    map<char, int> file_to_col = {{'a', 0}, {'b', 1}, {'c', 2}, {'d', 3}, {'e', 4}, {'f', 5}, {'g', 6}, {'h', 7}};
+pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn) {
+    string san = sanIn;
+
+    if (san == "1-0" || san == "0-1" || san == "1/2-1/2" || san == "*") {
+        cout << "WARNING: Game result entered. This should be handled with higher order logic.\n"
+             << endl;
+        return make_pair(make_pair(-1, -1), make_pair(-1, -1));
+    }
+
+    if (verbose) {
+        cout << "San: " << san << endl;
+        cout << "Turn: " << turn << endl;
+    }
+    map<char, int> fileToCol = {{'a', 0}, {'b', 1}, {'c', 2}, {'d', 3}, {'e', 4}, {'f', 5}, {'g', 6}, {'h', 7}};
+    int isCheck = 0;
+    if (san.back() == '+') {  // This check needs to be done before destRow and destCol are assigned
+        san = san.substr(0, san.length() - 1);
+        isCheck = 1;
+    }
     int destRow = 8 - (san[san.length() - 1] - '0');
-    int destCol = file_to_col[san[san.length() - 2]];
-
-    map<char, PieceType> charToPieceType = {{'r', ROOK}, {'n', KNIGHT}, {'b', BISHOP}, {'q', QUEEN}, {'k', KING}, {'R', ROOK}, {'N', KNIGHT}, {'B', BISHOP}, {'Q', QUEEN}, {'K', KING}};
-
+    int destCol = fileToCol[san[san.length() - 2]];
+    map<char, PieceType> charToPieceType = {{'r', ROOK}, {'n', KNIGHT}, {'b', BISHOP}, {'q', QUEEN}, {'k', KING}, {'R', ROOK}, {'N', KNIGHT}, {'B', BISHOP}, {'Q', QUEEN}, {'K', KING}, {'p', PAWN}, {'P', PAWN}, {'a', PAWN}, {'b', PAWN}, {'c', PAWN}, {'d', PAWN}, {'e', PAWN}, {'f', PAWN}, {'g', PAWN}, {'h', PAWN}};
     if (san == "O-O") {
         if (turn == 1) {
             return make_pair(make_pair(7, 4), make_pair(7, 6));
@@ -348,21 +395,56 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& san) {
         }
     }
 
+    // Then it's a capture. The first char will indicate the piece type and the next two chars the dest square
+    if (san[1] == 'x') {
+        if (verbose) {
+            cout << endl
+                 << "San characteristic: san[1] = 'x'" << endl;
+        }
+
+        PieceType piece = charToPieceType[san[0]];
+        int fromCol = fileToCol[san[0]];
+        if (san[0] >= 'a' && san[0] <= 'h') {
+            piece = PAWN;
+        } else {
+            piece = charToPieceType[san[0]];
+            for (int i = 0; i < 8; i++) {
+                for (int j = 0; j < 8; j++) {
+                    if (board[i][j].type == piece && board[i][j].color == turn) {
+                        vector<pair<int, int>> validMoves = getValidMoves(i, j);
+                        if (find(validMoves.begin(), validMoves.end(), make_pair(destRow, destCol)) != validMoves.end()) {
+                            return make_pair(make_pair(i, j), make_pair(destRow, destCol));
+                        }
+                    }
+                }
+            }
+        }
+
+        int destRow = 8 - static_cast<int>(san[3] - '0');
+        int destCol = fileToCol[san[san.length() - 2]];
+
+        for (int k = 0; k < 8; k++) {
+            if (board[k][fromCol].type == piece) {
+                vector<pair<int, int>> validMoves = getValidMoves(k, fromCol);
+                if (find(validMoves.begin(), validMoves.end(), make_pair(destRow, destCol)) != validMoves.end()) {
+                    return make_pair(make_pair(k, fromCol), make_pair(destRow, destCol));
+                }
+            }
+        }
+    }
+
     // If san length is 2, then it's a pawn move: e5, d4, g3, ...
     if (san.length() == 2) {
-        cout << endl
-             << endl
-             << "# 2 letter" << endl;
-        cout << "destRow: " << destRow << endl;
-        cout << "destCol: " << destCol << endl;
+        if (verbose) {
+            cout << endl
+                 << "San characteristic: |san| = 2" << endl;
+        }
         if (turn == 1) {
             for (int k = destRow; k < 8; k++) {
                 Piece currPiece = board[k][destCol];
                 if (currPiece.type == PAWN && currPiece.color == turn) {
                     int fromRow = k;
                     int fromCol = destCol;
-                    cout << "fromRow: " << fromRow << endl;
-                    cout << "fromCol: " << fromCol << endl;
                     return make_pair(make_pair(fromRow, fromCol), make_pair(destRow, destCol));
                     break;
                 }
@@ -373,8 +455,6 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& san) {
                 if (currPiece.type == PAWN && currPiece.color == turn) {
                     int fromRow = k;
                     int fromCol = destCol;
-                    cout << "fromRow: " << fromRow << endl;
-                    cout << "fromCol: " << fromCol << endl;
                     return make_pair(make_pair(fromRow, fromCol), make_pair(destRow, destCol));
                     break;
                 }
@@ -382,30 +462,50 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& san) {
         }
     }
 
-    // If san length is 3, then it's a piece move: Nf3, Bb5, ...
+    // If san length is 3, then it's a piece move: Nf3, Bb5, Re1, ...
     else if (san.length() == 3) {
-        cout << endl
-             << endl
-             << "# 3 letter" << endl;
+        if (verbose) {
+            cout << endl
+                 << "San characteristic: |san| = 3" << endl;
+        }
+        PieceType piece = charToPieceType[san[0]];
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if (board[i][j].type == piece && board[i][j].color == turn) {
+                    vector<pair<int, int>> validMoves = getValidMoves(i, j);
+                    if (verbose) {
+                        cout << "destRow:" << destRow << " destCol:" << destCol << endl;
+                        cout << i << " " << j << endl << "Valid moves: " << endl;
+                    }
+                    
+                    for (auto move : validMoves) {
+                        if (verbose) {
+                            cout << move.first << " " << move.second << endl;
+                        }
+                        if (move.first == destRow && move.second == destCol) {
+                            return make_pair(make_pair(i, j), make_pair(destRow, destCol));
+                        }
+                    }
+                    if (find(validMoves.begin(), validMoves.end(), make_pair(destRow, destCol)) != validMoves.end()) {
+                        return make_pair(make_pair(i, j), make_pair(destRow, destCol));
+                    }
+                }
+            }
+        }
+        //  cout << "piece: " << piece << endl;
+        //  cout << "san: " << san << endl;
     }
 
     // If san length is 4, then it's a capture: Nxf3, Bxb5 or ambiguous move: Nbd7, R1e2, or pawn promotion: e8=Q, or
+    // Case with second char being x has already been handled.
+    // Here is for the case of ambiguous moves
     else if (san.length() == 4) {
-        cout << endl
-             << endl
-             << "# 4 letter" << endl;
+        if (verbose) {
+            cout << endl
+                 << "San characteristic: |san| = 4" << endl;
+        }
     }
 
-    // for (int i = 0; i < 8; ++i) {
-    //     for (int j = 0; j < 8; ++j) {
-    //         if (VecBoard::getPiece(i, j) == piece) {
-    //             vector<pair<int, int>> validMoves = VecBoard::getValidMoves(i, j);
-    //             if (find(validMoves.begin(), validMoves.end(), make_pair(destRow, destCol)) != validMoves.end()) {
-    //                 return make_pair(make_pair(i, j), make_pair(destRow, destCol));
-    //             }
-    //         }
-    //     }
-    // }
-
+    cout << "WARNING: Invalid move attempted: " << san << endl;
     return make_pair(make_pair(-1, -1), make_pair(-1, -1));  // Return invalid pairs if no valid move is found
 }

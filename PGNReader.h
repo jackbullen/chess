@@ -28,7 +28,7 @@ class PGNReader {
 
     PGNReader(const string& filename);
     Game parseGame();
-    GameBoard createBoard(const Game& game);
+    GameBoard printGame(const Game& game);
 
    private:
     ifstream file;

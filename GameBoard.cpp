@@ -4,6 +4,8 @@
 
 using namespace std;
 
+const int verbose = 0;
+
 GameBoard::GameBoard() {
     pieceTypeNameMap = {
         {PAWN, "Pawn"},
@@ -26,9 +28,17 @@ GameBoard::GameBoard() {
 
 void GameBoard::move(string sanMove) {
     pair<pair<int, int>, pair<int, int>> indices = vecBoard.sanToIndices(sanMove);
+    if (verbose) {
+        cout << "Indices: (" << indices.first.first << " " << indices.first.second << ") -> (" << indices.second.first << " " << indices.second.second << ")" << endl;
+    }
     pair<int, int> from = indices.first;
     pair<int, int> to = indices.second;
+
     vecBoard.move(from.first, from.second, to.first, to.second);
+}
+
+void GameBoard::reset() {
+    vecBoard.start();
 }
 
 void GameBoard::print() {

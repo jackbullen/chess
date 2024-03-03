@@ -10,6 +10,7 @@ using namespace std;
 class GameBoard {
    public:
     GameBoard();
+    void reset();
     void move(string san);
     void print();
     Piece getPiece(int x, int y);

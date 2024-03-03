@@ -40,34 +40,58 @@ PGNReader::Game PGNReader::parseGame() {
             // Parse game moves
             istringstream iss_moves(line);
             string move;
+            int ct = 0;
             while (iss_moves >> move) {
+                ct++;
+                if (ct > 350) {
+                    cout << "WARNING: Game has more than 350 moves.";
+                }
                 size_t pos = move.find('.');
                 if (pos != string::npos) {
-                    // Split the string into white and black moves
+                    // Get the moves and and to out list
                     string white_move = move.substr(0, pos);
                     string black_move = move.substr(pos + 1);
-
-                    // Add the moves to the list
                     if (!white_move.empty()) game.moves.push_back(white_move);
                     if (!black_move.empty()) game.moves.push_back(black_move);
+                } else if (move == "1-0" || move == "0-1" || move == "1/2-1/2" || move == "*") {
+                    return game;
                 } else {
                     game.moves.push_back(move);
                 }
+
             }
         }
     }
     return game;
 }
 
-GameBoard PGNReader::createBoard(const Game& game) {
+GameBoard PGNReader::printGame(const Game& game) {
+    cout << game.event << endl;
+    cout << game.site << endl;
+    cout << game.date << endl;
+    cout << game.round << endl;
+    cout << game.white << endl;
+    cout << game.black << endl;
+    cout << game.result << endl;
+    cout << game.whiteElo << endl;
+    cout << game.blackElo << endl;
     GameBoard board;
-    board.print();
+    int move_number = 1;
     for (const auto& move : game.moves) {
         if (std::all_of(move.begin(), move.end(), ::isdigit)) {
             continue;
         }
+        if (move == "1-0" || move == "0-1" || move == "1/2-1/2" || move == "*") {
+            return board;
+        }
         board.move(move);
+        if (move_number % 2 == 0) {
+            cout << move_number / 2 << "... " << move << endl;
+        } else {
+            cout << move_number / 2 + 1 << ". " << move << " " << endl;
+        }
         board.print();
+        move_number++;
     }
     return board;
 }
