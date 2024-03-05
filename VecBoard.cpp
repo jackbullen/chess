@@ -49,6 +49,12 @@ void VecBoard::forceMove(int fromX, int fromY, int toX, int toY) {
 }
 
 void VecBoard::move(int fromX, int fromY, int toX, int toY) {
+    // Reset enPassant flags
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            board[i][j].enPassant = 0;
+        }
+    }
     // Handles moving of pieces by checking for validity and calling forceMove
     if (board[fromX][fromY].type == EMPTY) {
         throw invalid_argument("MoveError: move from an empty square\n");
@@ -62,12 +68,6 @@ void VecBoard::move(int fromX, int fromY, int toX, int toY) {
         throw invalid_argument("MoveError: capture your own piece\n");
         return;
     }
-    if (!checkMove(fromX, fromY, toX, toY)) {
-        // TODO: Better exception handling for checkMove returning false.
-        //       Could throw better exception inside checkMove
-        throw invalid_argument("MoveError: checkMove returned false\n");
-        return;
-    }
     if (board[fromX][fromY].type == KING && abs(fromY - toY) == 2) {
         // If castling, also move the rook
         if (toY > fromY) {
@@ -78,7 +78,16 @@ void VecBoard::move(int fromX, int fromY, int toX, int toY) {
             forceMove(fromX, 0, fromX, toY + 1);
         }
     }
-    forceMove(fromX, fromY, toX, toY);
+    forceMove(fromX, fromY, toX, toY); // Make the move on the board
+
+    // Set enPassant flags if the move was a pawn move of two squares
+    if (board[toX][toY].type == PAWN) {
+        if (toX - fromX == 2 || toX - fromX == -2) {
+            board[toX][toY].enPassant = 1;
+        }
+    }
+
+    // Update turn
     if (turn == 1) {
         turn = -1;
     } else {
@@ -92,61 +101,6 @@ bool VecBoard::checkMove(int fromX, int fromY, int toX, int toY) {
     for (auto move : validMoves) {
         if (move.first == toX && move.second == toY) {
             return true;
-        }
-    }
-    return false;
-}
-
-bool VecBoard::isBlocked(int fromX, int fromY, int toX, int toY) {
-    // Returns true if there is a piece obstructing the move from (fromX, fromY) to (toX, toY)
-    int dx = toX - fromX;
-    int dy = toY - fromY;
-    if (dx == 0 && dy == 0) {
-        return false;
-    }
-    if (dx == 0) {
-        for (int i = 1; i < abs(dy); i++) {
-            if (dy > 0) {
-                if (board[fromX][fromY + i].type != EMPTY) {
-                    return true;
-                }
-            } else {
-                if (board[fromX][fromY - i].type != EMPTY) {
-                    return true;
-                }
-            }
-        }
-    } else if (dy == 0) {
-        for (int i = 1; i < abs(dx); i++) {
-            if (dx > 0) {
-                if (board[fromX + i][fromY].type != EMPTY) {
-                    return true;
-                }
-            } else {
-                if (board[fromX - i][fromY].type != EMPTY) {
-                    return true;
-                }
-            }
-        }
-    } else if (abs(dx) == abs(dy)) {
-        for (int i = 1; i < abs(dx); i++) {
-            if (dx > 0 && dy > 0) {
-                if (board[fromX + i][fromY + i].type != EMPTY) {
-                    return true;
-                }
-            } else if (dx > 0 && dy < 0) {
-                if (board[fromX + i][fromY - i].type != EMPTY) {
-                    return true;
-                }
-            } else if (dx < 0 && dy > 0) {
-                if (board[fromX - i][fromY + i].type != EMPTY) {
-                    return true;
-                }
-            } else {
-                if (board[fromX - i][fromY - i].type != EMPTY) {
-                    return true;
-                }
-            }
         }
     }
     return false;
@@ -220,7 +174,7 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
                 }
                 int newX = x + dx;
                 int newY = y + dy;
-                while (isMoveInBounds(newX, newY)) {
+                while (isMoveInBounds(newX, newY) && board[newX][newY].color != piece.color) {
                     if (verbose) {
                         cout << "Possible move: " << newX << ", " << newY << endl;
                     }
@@ -270,6 +224,23 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
             }
             break;
         case PAWN:
+            // en passant check
+            if (x == 3 && board[x][y].color == 1) {
+                if (y > 0 && board[x][y - 1].enPassant) {
+                    moves.push_back({x - 1, y - 1});
+                }
+                if (y < 7 && board[x][y + 1].enPassant) {
+                    moves.push_back({x - 1, y + 1});
+                }
+            } else if (x == 4 && board[x][y].color == -1) {
+                if (y > 0 && board[x][y - 1].enPassant) {
+                    moves.push_back({x + 1, y - 1});
+                }
+                if (y < 7 &&  board[x][y + 1].enPassant) {
+                    moves.push_back({x + 1, y + 1});
+                }
+            }
+
             if (piece.color == 1) {
                 if (isMoveInBounds(x - 1, y) && board[x - 1][y].type == EMPTY) {
                     moves.push_back({x - 1, y});
@@ -372,6 +343,7 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
         cout << "San: " << san << endl;
         cout << "Turn: " << turn << endl;
     }
+
     map<char, int> fileToCol = {{'a', 0}, {'b', 1}, {'c', 2}, {'d', 3}, {'e', 4}, {'f', 5}, {'g', 6}, {'h', 7}};
     int isCheck = 0;
     if (san.back() == '+') {  // This check needs to be done before destRow and destCol are assigned
@@ -446,7 +418,6 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
                     int fromRow = k;
                     int fromCol = destCol;
                     return make_pair(make_pair(fromRow, fromCol), make_pair(destRow, destCol));
-                    break;
                 }
             }
         } else {
@@ -456,7 +427,6 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
                     int fromRow = k;
                     int fromCol = destCol;
                     return make_pair(make_pair(fromRow, fromCol), make_pair(destRow, destCol));
-                    break;
                 }
             }
         }
@@ -475,9 +445,10 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
                     vector<pair<int, int>> validMoves = getValidMoves(i, j);
                     if (verbose) {
                         cout << "destRow:" << destRow << " destCol:" << destCol << endl;
-                        cout << i << " " << j << endl << "Valid moves: " << endl;
+                        cout << i << " " << j << endl
+                             << "Valid moves: " << endl;
                     }
-                    
+
                     for (auto move : validMoves) {
                         if (verbose) {
                             cout << move.first << " " << move.second << endl;
@@ -492,8 +463,6 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
                 }
             }
         }
-        //  cout << "piece: " << piece << endl;
-        //  cout << "san: " << san << endl;
     }
 
     // If san length is 4, then it's a capture: Nxf3, Bxb5 or ambiguous move: Nbd7, R1e2, or pawn promotion: e8=Q, or
@@ -504,6 +473,42 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
             cout << endl
                  << "San characteristic: |san| = 4" << endl;
         }
+        PieceType piece = charToPieceType[san[0]];
+        int fromCol = fileToCol[san[1]];
+
+        // Check if ambiguity is along column (san[1] in {a-h})
+        //                             or row (san[1] in {0-7})
+        if (san[1] >= '0' && san[1] <= '7') {
+            int fromRow = 8 - (san[1] - '0');
+            for (int k = 0; k < 8; k++) {
+                if (board[fromRow][k].type == piece && board[fromRow][k].color == turn) {
+                    vector<pair<int, int>> validMoves = getValidMoves(fromRow, k);
+                    if (find(validMoves.begin(), validMoves.end(), make_pair(destRow, destCol)) != validMoves.end()) {
+                        return make_pair(make_pair(fromRow, k), make_pair(destRow, destCol));
+                    }
+                }
+            }
+        } else {  // then san[1] is a-h
+            int fromCol = fileToCol[san[1]];
+            for (int k = 0; k < 8; k++) {
+                if (board[k][fromCol].type == piece && board[k][fromCol].color == turn) {
+                    vector<pair<int, int>> validMoves = getValidMoves(k, fromCol);
+                    if (find(validMoves.begin(), validMoves.end(), make_pair(destRow, destCol)) != validMoves.end()) {
+                        return make_pair(make_pair(k, fromCol), make_pair(destRow, destCol));
+                    }
+                }
+            }
+        }
+    }
+
+    // if |san| = 5 then it's an ambiguous capture
+    else if (san.length() == 5) {
+        // TODO: Implement ambiguous capture
+    }
+
+    // if san[2] = '=' then its a pawn promotion
+    else if (san[2] == '=') {
+        // TODO: Implement pawn promotion
     }
 
     cout << "WARNING: Invalid move attempted: " << san << endl;

@@ -15,7 +15,8 @@ struct Piece {
     PieceType type;
     int color;
     int value;
-    Piece(PieceType type, int color, int value) : type(type), color(color), value(value) {}
+    int enPassant;
+    Piece(PieceType type, int color, int value) : type(type), color(color), value(value), enPassant(0) {}
 };
 
 #endif
