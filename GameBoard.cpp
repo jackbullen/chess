@@ -14,7 +14,11 @@ GameBoard::GameBoard() {
         {BISHOP, "Bishop"},
         {QUEEN, "Queen"},
         {KING, "King"}};
-
+    charPieceTypeMap = {
+        {'R', ROOK},
+        {'N', KNIGHT},
+        {'B', BISHOP},
+        {'Q', QUEEN}};
     fileMap = {
         {'a', 0},
         {'b', 1},
@@ -33,8 +37,13 @@ void GameBoard::move(string sanMove) {
     }
     pair<int, int> from = indices.first;
     pair<int, int> to = indices.second;
-
-    vecBoard.move(from.first, from.second, to.first, to.second);
+    if (sanMove[sanMove.size() - 2] == '=') {// Promotion
+        vecBoard.move(from.first, from.second, to.first, to.second, charPieceTypeMap[sanMove[sanMove.size() - 1]]);
+    } else if (sanMove[sanMove.size() - 3] == '=') {// Promotion with check
+        vecBoard.move(from.first, from.second, to.first, to.second, charPieceTypeMap[sanMove[sanMove.size() - 2]]);
+    } else {// Other moves
+        vecBoard.move(from.first, from.second, to.first, to.second);
+    }
 }
 
 void GameBoard::reset() {

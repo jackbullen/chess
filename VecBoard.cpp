@@ -48,7 +48,7 @@ void VecBoard::forceMove(int fromX, int fromY, int toX, int toY) {
     board[fromX][fromY] = Piece(EMPTY, 0, 0);
 }
 
-void VecBoard::move(int fromX, int fromY, int toX, int toY) {
+void VecBoard::move(int fromX, int fromY, int toX, int toY, PieceType promotionType) {
     // Reset enPassant flags
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
@@ -68,6 +68,15 @@ void VecBoard::move(int fromX, int fromY, int toX, int toY) {
         throw invalid_argument("MoveError: capture your own piece\n");
         return;
     }
+    // Promotion: Anytime a pawn moves to the last rank, it promotes to a queen
+    if (board[fromX][fromY].type == PAWN && (toX == 0 || toX == 7)) {
+        board[fromX][fromY] = Piece(promotionType, turn, 9); 
+    //  when the move is made it will be with a queen
+    }
+    // If en passant, remove the capture pawn
+    if (board[fromX][fromY].type == PAWN && fromY != toY && board[toX][toY].type == EMPTY) {
+        board[toX + turn][toY] = Piece(EMPTY, 0, 0);
+    }
     if (board[fromX][fromY].type == KING && abs(fromY - toY) == 2) {
         // If castling, also move the rook
         if (toY > fromY) {
@@ -78,15 +87,15 @@ void VecBoard::move(int fromX, int fromY, int toX, int toY) {
             forceMove(fromX, 0, fromX, toY + 1);
         }
     }
+    
     forceMove(fromX, fromY, toX, toY); // Make the move on the board
 
-    // Set enPassant flags if the move was a pawn move of two squares
+    // Set enPassant flag at the destination square if the move was a pawn move of two squares
     if (board[toX][toY].type == PAWN) {
         if (toX - fromX == 2 || toX - fromX == -2) {
             board[toX][toY].enPassant = 1;
         }
     }
-
     // Update turn
     if (turn == 1) {
         turn = -1;
@@ -95,30 +104,26 @@ void VecBoard::move(int fromX, int fromY, int toX, int toY) {
     }
 }
 
-bool VecBoard::checkMove(int fromX, int fromY, int toX, int toY) {
-    // Returns true if the move is valid, false otherwise
-    vector<pair<int, int>> validMoves = getValidMoves(fromX, fromY);
-    for (auto move : validMoves) {
-        if (move.first == toX && move.second == toY) {
-            return true;
-        }
-    }
-    return false;
-}
-
 vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
     // Returns a vector of valid moves for a piece at position (x, y)
     Piece piece = board[x][y];
     vector<pair<int, int>> moves;
+    vector<pair<int, int>> validDirections;
+    pair<int, int> pieceToKingDiff;
+    pair<int, int> pieceToKingDirection;
+    int isPinned = 0;
     int dxKnight[] = {-2, -1, 1, 2, 2, 1, -1, -2};
     int dyKnight[] = {1, 2, 2, 1, -1, -2, -2, -1};
     switch (piece.type) {
         case EMPTY:
-            break;
+            throw invalid_argument("MoveError: getValidMoves called on an empty square\n");
         case KING:
             for (int i = -1; i <= 1; i++) {
                 for (int j = -1; j <= 1; j++) {
-                    if (isMoveInBounds(x + i, y + j)) {
+                    if (i == 0 && j == 0) {
+                        continue;
+                    }
+                    if (isMoveInBounds(x + i, y + j) && board[x + i][y + j].color != piece.color) {
                         moves.push_back({x + i, y + j});
                     }
                 }
@@ -151,22 +156,140 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
                     }
                 }
             }
-
             break;
         case KNIGHT:
-            for (int i = 0; i < 8; i++) {
-                int newX = x + dxKnight[i];
-                int newY = y + dyKnight[i];
-                if (isMoveInBounds(newX, newY)) {
-                    moves.push_back({newX, newY});
+            // This pin code for the knight and rook (which needs to be added for other pieces)
+            // should be migrates into a seperate file called move.cpp and it needs to be split into helper functions 
+
+            // Check for possibility of a pin (a ray from this piece to same color king)
+            // -------------------------------------------------------------------------
+            isPinned = 0;
+            if (verbose) {
+                cout << "KNIGHT at (x, y): " << x << ", " << y << endl;
+            }
+            // 1. Find the king
+            for (int tx = 0; tx < 8; tx++) {
+                for (int ty = 0; ty < 8; ty++) {
+                    if (board[tx][ty].type == KING && board[tx][ty].color == piece.color) {
+                        pieceToKingDiff = {tx - x, ty - y};
+                        break;
+                    }
                 }
+            }
+            // 2. Check if pieceToKingDiff is an actual line on the chess board
+            if (pieceToKingDiff.first != 0 && pieceToKingDiff.second != 0 
+                && abs(pieceToKingDiff.first) != abs(pieceToKingDiff.second)) {
+                // There is no possible pin, any direction is possible
+                validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+            } else {// Pin is possible along pieceToKingDiff
+                // 3. Iterate down -pieceToKingDirection and check if there is a piece that can pin
+                // (queen or rook if pieceToKingDirection is horizontal or vertical and queen or bishop otherwise)
+
+                int dx = (pieceToKingDiff.first > 0) - (pieceToKingDiff.first < 0);
+                int dy = (pieceToKingDiff.second > 0) - (pieceToKingDiff.second < 0);
+                
+                // But first, let's look in direction to king for obstructing pieces
+                int newX = x + dx;
+                int newY = y + dy;
+                while (isMoveInBounds(newX, newY) && board[newX][newY].type == EMPTY) {
+                    newX += dx;
+                    newY += dy;
+                }
+                if (board[newX][newY].color != piece.color || board[newX][newY].type != KING) {
+                    // Then the pin is obstructed
+                    validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+                } else { // Check for a piece that can pin
+                    newX = x - dx;
+                    newY = y - dy;
+                    while (isMoveInBounds(newX, newY) && board[newX][newY].color != piece.color) {
+                        if (board[newX][newY].type != EMPTY) {
+                            if (board[newX][newY].type == QUEEN || (board[newX][newY].type == ROOK && (dx == 0 || dy == 0)) || (board[newX][newY].type == BISHOP && (dx != 0 && dy != 0))) {
+                                isPinned = 1;
+                            } else {// The pin is obstructed
+                                break;
+                            }
+                        }
+                        newX -= dx;
+                        newY -= dy;
+                    }
+                }
+            }
+            if (!isPinned) {
+                for (int i = 0; i < 8; i++) {
+                    int newX = x + dxKnight[i];
+                    int newY = y + dyKnight[i];
+                    if (isMoveInBounds(newX, newY)) {
+                        moves.push_back({newX, newY});
+                    }
+                }
+            } else {
+                moves = {};
             }
             break;
         case ROOK:
             if (verbose) {
                 cout << "ROOK at (x, y): " << x << ", " << y << endl;
             }
-            for (auto direction : vector<pair<int, int>>{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}) {
+            // Check for possibility of a pin (a ray from this piece to same color king)
+            // -------------------------------------------------------------------------
+            validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+            // 1. Find the king
+            for (int tx = 0; tx < 8; tx++) {
+                for (int ty = 0; ty < 8; ty++) {
+                    if (board[tx][ty].type == KING && board[tx][ty].color == piece.color) {
+                        pieceToKingDiff = {tx - x, ty - y};
+                        break;
+                    }
+                }
+            }
+
+            // 2. Check if pieceToKingDiff is an actual line on the chess board
+            if (pieceToKingDiff.first != 0 && pieceToKingDiff.second != 0
+                && abs(pieceToKingDiff.first) != abs(pieceToKingDiff.second)) {
+                // There is no possible pin, any direction is possible
+                validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+            } else {// Pin is possible along pieceToKingDiff
+                // 3. Iterate down -pieceToKingDirection and check if there is a piece that can pin
+                // (queen or rook if pieceToKingDirection is horizontal or vertical and queen or bishop otherwise)
+
+                int dx = (pieceToKingDiff.first > 0) - (pieceToKingDiff.first < 0);
+                int dy = (pieceToKingDiff.second > 0) - (pieceToKingDiff.second < 0);
+
+                // But first, let's look in direction to king for obstructing pieces
+                int newX = x + dx;
+                int newY = y + dy;
+                while (isMoveInBounds(newX, newY) && board[newX][newY].type == EMPTY) {
+                    newX += dx;
+                    newY += dy;
+                }
+                if (board[newX][newY].color != piece.color || board[newX][newY].type != KING) {
+                    // Then the pin is obstructed
+                    validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+                } else { // Check for a piece that can pin
+                    newX = x - dx;
+                    newY = y - dy;
+                    while (isMoveInBounds(newX, newY) && board[newX][newY].color != piece.color) {
+                        if (board[newX][newY].type != EMPTY) {
+                            if (board[newX][newY].type == QUEEN || (board[newX][newY].type == ROOK && (dx == 0 || dy == 0)) || (board[newX][newY].type == BISHOP && (dx != 0 && dy != 0))) {
+                                // Then the rook can only move towards the queen or rook, and if it's on a diagonal then it cannot move
+                                if (dx == 0 || dy == 0) {
+                                    validDirections = {{dx, dy}, {-dx, -dy}};
+                                    break;
+                                } else {
+                                    validDirections = {};
+                                    break;
+                                }
+                                break;
+                            }
+                            break;
+                        }
+                        newX -= dx;
+                        newY -= dy;
+                    }
+                }
+            }
+
+            for (auto direction : validDirections) {
                 int dx = direction.first;
                 int dy = direction.second;
                 if (verbose) {
@@ -179,11 +302,14 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
                         cout << "Possible move: " << newX << ", " << newY << endl;
                     }
                     moves.push_back({newX, newY});
+                    if (board[newX][newY].type != EMPTY) {
+                        break;// If the square is occupied, stop the loop
+                    }
+
                     newX += dx;
                     newY += dy;
                 }
             }
-
             break;
         case BISHOP:
             if (verbose) {
@@ -194,18 +320,19 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
                     // cout << "\ndx:" << dx << " dy:" << dy << endl;
                     int newX = x + dx;
                     int newY = y + dy;
-                    // cout << "new while";
 
                     while (isMoveInBounds(newX, newY) && board[newX][newY].color != piece.color) {
                         // cout << "Possible move: " << newX << ", " << newY << endl;
                         moves.push_back({newX, newY});
+                        if (board[newX][newY].type != EMPTY) {
+                            break;// If the square is occupied, stop the loop
+                        }
                         newX += dx;
                         newY += dy;
                         // cout << "newX, newY: " << newX << ", " << newY << endl;
                     }
                 }
             }
-
             break;
         case QUEEN:
             for (int dx = -1; dx <= 1; dx++) {
@@ -240,7 +367,6 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
                     moves.push_back({x + 1, y + 1});
                 }
             }
-
             if (piece.color == 1) {
                 if (isMoveInBounds(x - 1, y) && board[x - 1][y].type == EMPTY) {
                     moves.push_back({x - 1, y});
@@ -340,15 +466,19 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
     }
 
     if (verbose) {
-        cout << "San: " << san << endl;
+        cout << "sanToIndices(" << san << ")" << endl;
         cout << "Turn: " << turn << endl;
     }
 
     map<char, int> fileToCol = {{'a', 0}, {'b', 1}, {'c', 2}, {'d', 3}, {'e', 4}, {'f', 5}, {'g', 6}, {'h', 7}};
     int isCheck = 0;
-    if (san.back() == '+') {  // This check needs to be done before destRow and destCol are assigned
+    if (san.back() == '+') {// this condition is modifies san, needs to be at top
         san = san.substr(0, san.length() - 1);
         isCheck = 1;
+    }
+    if (san.back() == '#') {
+        san = san.substr(0, san.length() - 1);
+        // checkmate, possibly add a flag for this
     }
     int destRow = 8 - (san[san.length() - 1] - '0');
     int destCol = fileToCol[san[san.length() - 2]];
@@ -364,6 +494,27 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
             return make_pair(make_pair(7, 4), make_pair(7, 2));
         } else {
             return make_pair(make_pair(0, 4), make_pair(0, 2));
+        }
+    }
+
+    // if san[-2] = '=' then its a pawn promotion b8=Q, dxe1=Q, ...
+    // not handling non queen promotions atm
+    else if (san[san.size() - 2] == '=') {
+        if (verbose) {
+            cout << endl
+                 << "San characteristic: san[-2] = '='\n";
+        }
+        int fromCol = fileToCol[san[0]];
+        if (san[1] == 'x') {
+            destCol = fileToCol[san[2]];
+        } else {
+            destCol = fileToCol[san[0]];
+        }
+        
+        if (turn == 1) {
+            return make_pair(make_pair(1, fromCol), make_pair(0, destCol));
+        } else {
+            return make_pair(make_pair(6, fromCol), make_pair(7, destCol));
         }
     }
 
@@ -465,20 +616,19 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
         }
     }
 
-    // If san length is 4, then it's a capture: Nxf3, Bxb5 or ambiguous move: Nbd7, R1e2, or pawn promotion: e8=Q, or
-    // Case with second char being x has already been handled.
-    // Here is for the case of ambiguous moves
+    // If san length is 4, then it's a capture: Nxf3, Bxb5 or ambiguous move: Nbd7, R1e2, or pawn promotion: e8=Q
+    // Capture and promotion cases have already checked.
+    // Here ambiguous move: Nbd7, R1e2
     else if (san.length() == 4) {
         if (verbose) {
             cout << endl
                  << "San characteristic: |san| = 4" << endl;
         }
         PieceType piece = charToPieceType[san[0]];
-        int fromCol = fileToCol[san[1]];
 
         // Check if ambiguity is along column (san[1] in {a-h})
         //                             or row (san[1] in {0-7})
-        if (san[1] >= '0' && san[1] <= '7') {
+        if (san[1] >= '1' && san[1] <= '8') {
             int fromRow = 8 - (san[1] - '0');
             for (int k = 0; k < 8; k++) {
                 if (board[fromRow][k].type == piece && board[fromRow][k].color == turn) {
@@ -501,14 +651,41 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
         }
     }
 
-    // if |san| = 5 then it's an ambiguous capture
-    else if (san.length() == 5) {
-        // TODO: Implement ambiguous capture
-    }
+    // if |san[2] = 'x' then it's an ambiguous capture
+    else if (san[2] == 'x') {
+        if (verbose) {
+            cout << endl
+                 << "San characteristic: san[2] = 'x'" << endl;
+        }
+        PieceType piece = charToPieceType[san[0]];
 
-    // if san[2] = '=' then its a pawn promotion
-    else if (san[2] == '=') {
-        // TODO: Implement pawn promotion
+        // Check if ambiguity is along column (san[1] in {a-h})
+        //                             or row (san[1] in {0-7})
+        if (san[1] >= '1' && san[1] <= '8') {
+            cout << "Working thus far: " << piece << endl;
+            int fromRow = 8 - (san[1] - '0');
+            for (int k = 0; k < 8; k++) {
+                cout << k << " " << fromRow << " : " << board[fromRow][k].type << " " << board[fromRow][k].color << endl;
+                if (board[fromRow][k].type == piece && board[fromRow][k].color == turn) {
+                    
+                    vector<pair<int, int>> validMoves = getValidMoves(fromRow, k);
+                    if (find(validMoves.begin(), validMoves.end(), make_pair(destRow, destCol)) != validMoves.end()) {
+                        return make_pair(make_pair(fromRow, k), make_pair(destRow, destCol));
+                    }
+                }
+            }
+        } else {  // then san[1] is a-h
+            int fromCol = fileToCol[san[1]];
+            for (int k = 0; k < 8; k++) {
+                if (board[k][fromCol].type == piece && board[k][fromCol].color == turn) {
+                    vector<pair<int, int>> validMoves = getValidMoves(k, fromCol);
+                    if (find(validMoves.begin(), validMoves.end(), make_pair(destRow, destCol)) != validMoves.end()) {
+                        return make_pair(make_pair(k, fromCol), make_pair(destRow, destCol));
+                    }
+                }
+            }
+        }
+        
     }
 
     cout << "WARNING: Invalid move attempted: " << san << endl;

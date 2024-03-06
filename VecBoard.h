@@ -17,7 +17,7 @@ class VecBoard {
     // VecBoard operations
     void start();
     void forceMove(int fromX, int fromY, int toX, int toY);
-    void move(int fromX, int fromY, int toX, int toY);
+    void move(int fromX, int fromY, int toX, int toY, PieceType promotion=QUEEN);
 
     // VecBoard moves
     bool checkMove(int fromX, int fromY, int toX, int toY);

@@ -16,6 +16,7 @@ class GameBoard {
     Piece getPiece(int x, int y);
     string loc(int x, int y);
     map<PieceType, string> pieceTypeNameMap;
+    map<char, PieceType> charPieceTypeMap;
     map<char, int> fileMap;
 
    private:
