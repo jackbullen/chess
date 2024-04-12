@@ -4,7 +4,6 @@
 #include <map>
 
 using namespace std;
-const int verbose = 0;
 const int VecBoard::BOARD_SIZE = 8;
 
 VecBoard::VecBoard() : turn(1) {
@@ -42,20 +41,26 @@ void VecBoard::start() {
     turn = 1;
 }
 
+// Moves a piece from (fromX, fromY) to (toX, toY)
 void VecBoard::forceMove(int fromX, int fromY, int toX, int toY) {
-    // Moves a piece from (fromX, fromY) to (toX, toY)
     board[toX][toY] = board[fromX][fromY];
     board[fromX][fromY] = Piece(EMPTY, 0, 0);
 }
 
-void VecBoard::move(int fromX, int fromY, int toX, int toY, PieceType promotionType) {
-    // Reset enPassant flags
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            board[i][j].enPassant = 0;
-        }
+// Handles moving of pieces by checking for validity, addressing special moves, then calling forceMove
+void VecBoard::move(string sanMove) {
+    // Get board indices of from and to square from the san
+    pair<pair<int, int>, pair<int, int>> indices = sanToIndices(sanMove);
+    if (verbose) {
+        cout << "Indices: (" << indices.first.first << " " << indices.first.second << ") -> (" << indices.second.first << " " << indices.second.second << ")" << endl;
     }
-    // Handles moving of pieces by checking for validity and calling forceMove
+    pair<int, int> from = indices.first;
+    pair<int, int> to = indices.second;
+    int fromX = from.first;
+    int fromY = from.second;
+    int toX = to.first;
+    int toY = to.second;
+    // Invalid moves handling
     if (board[fromX][fromY].type == EMPTY) {
         throw invalid_argument("MoveError: move from an empty square\n");
         return;
@@ -68,17 +73,28 @@ void VecBoard::move(int fromX, int fromY, int toX, int toY, PieceType promotionT
         throw invalid_argument("MoveError: capture your own piece\n");
         return;
     }
-    // Promotion: Anytime a pawn moves to the last rank, it promotes to a queen
+    // Reset enPassant flags
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            board[i][j].enPassant = 0;
+        }
+    }
+    // Promotion
     if (board[fromX][fromY].type == PAWN && (toX == 0 || toX == 7)) {
+        PieceType promotionType;
+        if (sanMove[sanMove.size() - 2] == '=') {
+            promotionType = charPieceTypeMap[sanMove[sanMove.size() - 1]];
+        } else if (sanMove[sanMove.size() - 3] == '=') {// with check
+            promotionType = charPieceTypeMap[sanMove[sanMove.size() - 2]];
+        }
         board[fromX][fromY] = Piece(promotionType, turn, 9); 
-    //  when the move is made it will be with a queen
     }
     // If en passant, remove the capture pawn
     if (board[fromX][fromY].type == PAWN && fromY != toY && board[toX][toY].type == EMPTY) {
         board[toX + turn][toY] = Piece(EMPTY, 0, 0);
     }
+    // Castling
     if (board[fromX][fromY].type == KING && abs(fromY - toY) == 2) {
-        // If castling, also move the rook
         if (toY > fromY) {
             // Kingside
             forceMove(fromX, 7, fromX, toY - 1);
@@ -104,9 +120,21 @@ void VecBoard::move(int fromX, int fromY, int toX, int toY, PieceType promotionT
     }
 }
 
+pair<int, int> VecBoard::diffToKing(int x, int y) {
+    // Returns the difference in position between the piece at (x, y) and the king of the same color
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            if (board[i][j].type == KING && board[i][j].color == board[x][y].color) {
+                return {i - x, j - y};
+            }
+        }
+    }
+    throw invalid_argument("MoveError: no king found\n");
+}
+
 vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
     // Returns a vector of valid moves for a piece at position (x, y)
-    Piece piece = board[x][y];
+    Piece piece = board[x][y]; // the piece to move
     vector<pair<int, int>> moves;
     vector<pair<int, int>> validDirections;
     pair<int, int> pieceToKingDiff;
@@ -168,14 +196,8 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
                 cout << "KNIGHT at (x, y): " << x << ", " << y << endl;
             }
             // 1. Find the king
-            for (int tx = 0; tx < 8; tx++) {
-                for (int ty = 0; ty < 8; ty++) {
-                    if (board[tx][ty].type == KING && board[tx][ty].color == piece.color) {
-                        pieceToKingDiff = {tx - x, ty - y};
-                        break;
-                    }
-                }
-            }
+            pieceToKingDiff = diffToKing(x, y);
+
             // 2. Check if pieceToKingDiff is an actual line on the chess board
             if (pieceToKingDiff.first != 0 && pieceToKingDiff.second != 0 
                 && abs(pieceToKingDiff.first) != abs(pieceToKingDiff.second)) {
@@ -234,14 +256,7 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
             // -------------------------------------------------------------------------
             validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
             // 1. Find the king
-            for (int tx = 0; tx < 8; tx++) {
-                for (int ty = 0; ty < 8; ty++) {
-                    if (board[tx][ty].type == KING && board[tx][ty].color == piece.color) {
-                        pieceToKingDiff = {tx - x, ty - y};
-                        break;
-                    }
-                }
-            }
+            pieceToKingDiff = diffToKing(x, y);
 
             // 2. Check if pieceToKingDiff is an actual line on the chess board
             if (pieceToKingDiff.first != 0 && pieceToKingDiff.second != 0

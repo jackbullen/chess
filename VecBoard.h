@@ -1,11 +1,14 @@
 #ifndef VECBOARD_H
 #define VECBOARD_H
 
-#include <vector>
-
 #include "Piece.h"
+#include <vector>
+#include <map>
+#include <iostream>
 
 using namespace std;
+
+const int verbose = 0;
 
 class VecBoard {
    public:
@@ -13,19 +16,25 @@ class VecBoard {
     vector<vector<Piece>> board;
     int turn;
     static const int BOARD_SIZE;
+    map<char, PieceType> charPieceTypeMap = {
+            {'R', ROOK},
+            {'N', KNIGHT},
+            {'B', BISHOP},
+            {'Q', QUEEN}};
 
-    // VecBoard operations
+    // Modifies VecBoard
     void start();
     void forceMove(int fromX, int fromY, int toX, int toY);
-    void move(int fromX, int fromY, int toX, int toY, PieceType promotion=QUEEN);
 
-    // VecBoard moves
+    void move(string sanMove);
+    vector<pair<int, int>> getValidMoves(int x, int y);
+    pair<pair<int, int>, pair<int, int>> sanToIndices(const string& san);
+
+    pair<int, int> diffToKing(int x, int y);
     bool checkMove(int fromX, int fromY, int toX, int toY);
     bool isMoveInBounds(int x, int y);
-    vector<pair<int, int>> getValidMoves(int x, int y);
-    bool isBlocked(int fromX, int fromY, int toX, int toY);
-    pair<pair<int, int>, pair<int, int>> sanToIndices(const string& san);
-    
+    bool isBlocked(int fromX, int fromY, int toX, int toY);    
+
     void print();
 
     Piece getPiece(int x, int y) const {
