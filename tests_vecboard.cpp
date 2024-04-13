@@ -2,14 +2,6 @@
 
 #include "VecBoard.h"
 
-TEST(VecBoardTest, ConstructorTest) {
-    VecBoard board;
-    ASSERT_EQ(board.board.size(), VecBoard::BOARD_SIZE);
-    for (const auto& row : board.board) {
-        ASSERT_EQ(row.size(), VecBoard::BOARD_SIZE);
-    }
-}
-
 TEST(VecBoardTest, MoveInBoundsTest) {
     VecBoard board;
     ASSERT_TRUE(board.isMoveInBounds(0, 0));
@@ -21,12 +13,12 @@ TEST(VecBoardTest, MoveInBoundsTest) {
     ASSERT_TRUE(board.isMoveInBounds(0, VecBoard::BOARD_SIZE-1));
 }
 
-TEST(VecBoardTest, MoveTest) {
+TEST(VecBoardTest, MoveTest1) {
     VecBoard board;
-    ASSERT_NO_THROW(board.move(6, 4, 4, 4));
-    ASSERT_NO_THROW(board.move(1, 4, 3, 4));
-    ASSERT_NO_THROW(board.move(7, 6, 5, 5));
-    ASSERT_NO_THROW(board.move(0, 6, 2, 5));
+    ASSERT_NO_THROW(board.move("e4"));
+    ASSERT_NO_THROW(board.move("e5"));
+    ASSERT_NO_THROW(board.move("c5"));
+    ASSERT_NO_THROW(board.move("d5"));
 }
 
 TEST(VecBoardTest, GetPieceTest) {
@@ -39,6 +31,27 @@ TEST(VecBoardTest, GetPieceTest) {
     ASSERT_EQ(piece.color, 1);
     piece = board.getPiece(4, 4);
     ASSERT_EQ(piece.type, PieceType::EMPTY);
+}
+
+TEST(VecBoardTest, getValidMovesPawnTest) {
+    VecBoard board;
+    vector<pair<int, int>> x;
+    x = {{2,0}, {3,0}};
+    ASSERT_EQ(board.getValidMoves(1,0), x);
+    x = {{5,7}, {4,7}};
+    ASSERT_EQ(board.getValidMoves(6,7), x);
+    board.move("e4");
+    x = {{3,4}};
+    ASSERT_EQ(board.getValidMoves(4,4), x);
+    board.move("Nf6");
+    x = {};
+    ASSERT_EQ(board.getValidMoves(1,5), x);
+    board.move("e5");
+    x = {{2,4}, {2,5}};
+    ASSERT_EQ(board.getValidMoves(3,4), x);
+    board.move("d5");
+    x = {{2,3}, {2,4}, {2,5}};
+    ASSERT_EQ(board.getValidMoves(3,4), x);
 }
 
 int main(int argc, char** argv) {

@@ -22,6 +22,10 @@ Piece GameBoard::getPiece(int x, int y) {
     return vecBoard.getPiece(x, y);
 }
 
+vector<pair<int, int>> GameBoard::getValidMoves(int x, int y) {
+    return vecBoard.getValidMoves(x, y);
+}
+
 string GameBoard::loc(int x, int y) {
     return pieceTypeNameMap[vecBoard.getPiece(x, y).type];
 }

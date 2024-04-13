@@ -30,10 +30,12 @@ class VecBoard {
     vector<pair<int, int>> getValidMoves(int x, int y);
     pair<pair<int, int>, pair<int, int>> sanToIndices(const string& san);
 
-    pair<int, int> diffToKing(int x, int y);
+
     bool checkMove(int fromX, int fromY, int toX, int toY);
     bool isMoveInBounds(int x, int y);
     bool isBlocked(int fromX, int fromY, int toX, int toY);    
+    pair<int, int> checkPin(int x, int y);
+    pair<int, int> diffToKing(int x, int y);
 
     void print();
 

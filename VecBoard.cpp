@@ -10,8 +10,8 @@ VecBoard::VecBoard() : turn(1) {
     start();
 }
 
+// Sets the board to the starting position
 void VecBoard::start() {
-    // Sets the board to the starting position
     board.resize(BOARD_SIZE, vector<Piece>(BOARD_SIZE, Piece(EMPTY, 0, 0)));
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
@@ -47,19 +47,23 @@ void VecBoard::forceMove(int fromX, int fromY, int toX, int toY) {
     board[fromX][fromY] = Piece(EMPTY, 0, 0);
 }
 
-// Handles moving of pieces by checking for validity, addressing special moves, then calling forceMove
+// Handles moving of pieces by checking for validity,
+// getting the moves as indices with sanToIndices 
+// addressing special moves, then calling forceMove
 void VecBoard::move(string sanMove) {
     // Get board indices of from and to square from the san
     pair<pair<int, int>, pair<int, int>> indices = sanToIndices(sanMove);
-    if (verbose) {
-        cout << "Indices: (" << indices.first.first << " " << indices.first.second << ") -> (" << indices.second.first << " " << indices.second.second << ")" << endl;
-    }
     pair<int, int> from = indices.first;
     pair<int, int> to = indices.second;
     int fromX = from.first;
     int fromY = from.second;
     int toX = to.first;
     int toY = to.second;
+
+    if (verbose) {
+        cout << "Indices: (" << fromX << " " << fromY << ") -> (" << toX << " " << toY << ")" << endl;
+    }
+
     // Invalid moves handling
     if (board[fromX][fromY].type == EMPTY) {
         throw invalid_argument("MoveError: move from an empty square\n");
@@ -73,15 +77,17 @@ void VecBoard::move(string sanMove) {
         throw invalid_argument("MoveError: capture your own piece\n");
         return;
     }
+
     // Reset enPassant flags
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             board[i][j].enPassant = 0;
         }
     }
+
     // Promotion
+    PieceType promotionType = QUEEN;
     if (board[fromX][fromY].type == PAWN && (toX == 0 || toX == 7)) {
-        PieceType promotionType;
         if (sanMove[sanMove.size() - 2] == '=') {
             promotionType = charPieceTypeMap[sanMove[sanMove.size() - 1]];
         } else if (sanMove[sanMove.size() - 3] == '=') {// with check
@@ -89,10 +95,12 @@ void VecBoard::move(string sanMove) {
         }
         board[fromX][fromY] = Piece(promotionType, turn, 9); 
     }
+
     // If en passant, remove the capture pawn
     if (board[fromX][fromY].type == PAWN && fromY != toY && board[toX][toY].type == EMPTY) {
         board[toX + turn][toY] = Piece(EMPTY, 0, 0);
     }
+
     // Castling
     if (board[fromX][fromY].type == KING && abs(fromY - toY) == 2) {
         if (toY > fromY) {
@@ -132,19 +140,75 @@ pair<int, int> VecBoard::diffToKing(int x, int y) {
     throw invalid_argument("MoveError: no king found\n");
 }
 
+pair<int, int> VecBoard::checkPin(int x, int y) {
+    // Returns (-1, -1) if the piece at (x, y) is not pinned
+    // and the location of the pinning piece if it is pinned
+    pair<int, int> pinningPieceLocation = {-1, -1};
+
+    Piece piece = board[x][y];
+    pair<int, int> pieceToKingDiff;
+    int isPinned = 0;
+
+    // Check if (x, y) and (king position) make a line on board
+    pieceToKingDiff = diffToKing(x, y);
+    if (pieceToKingDiff.first != 0 && pieceToKingDiff.second != 0 
+        && abs(pieceToKingDiff.first) != abs(pieceToKingDiff.second)) {
+        // No pin possible
+        isPinned = 0;
+
+    } else {// Pin is possible along pieceToKingDiff
+        // Iterate down -pieceToKingDirection to check if there is a piece that can pin
+        // (queen or rook if pieceToKingDirection is horizontal or vertical and queen or bishop otherwise)
+        int dx = (pieceToKingDiff.first > 0) - (pieceToKingDiff.first < 0);
+        int dy = (pieceToKingDiff.second > 0) - (pieceToKingDiff.second < 0);
+        
+        // Look in direction to king for obstructing pieces
+        int newX = x + dx;
+        int newY = y + dy;
+        while (isMoveInBounds(newX, newY) && board[newX][newY].type == EMPTY) {
+            newX += dx;
+            newY += dy;
+        }
+        if (board[newX][newY].color != piece.color || board[newX][newY].type != KING) {
+            // Pin is obstructed
+            isPinned = 0;
+        } else { // Pin is possible
+            newX = x - dx;
+            newY = y - dy;
+            while (isMoveInBounds(newX, newY) && board[newX][newY].color != piece.color) {
+                if (board[newX][newY].type != EMPTY) {
+                    if (board[newX][newY].type == QUEEN || (board[newX][newY].type == ROOK && (dx == 0 || dy == 0)) || (board[newX][newY].type == BISHOP && (dx != 0 && dy != 0))) {
+                        // Pin exists because of piece at (newX, newY)
+                        pinningPieceLocation = {newX, newY} ;
+                    } else {// Nothing pinning, or the pin is obstructed
+                        break;
+                    }
+                }
+                newX -= dx;
+                newY -= dy;
+            }
+        }
+    }
+    return pinningPieceLocation;
+}
+
 vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
     // Returns a vector of valid moves for a piece at position (x, y)
-    Piece piece = board[x][y]; // the piece to move
+    Piece piece = board[x][y]; 
     vector<pair<int, int>> moves;
     vector<pair<int, int>> validDirections;
-    pair<int, int> pieceToKingDiff;
-    pair<int, int> pieceToKingDirection;
-    int isPinned = 0;
+    pair<int, int> pieceToKingDiff = diffToKing(x, y);
+    pair<int, int> pinningPieceLocation = checkPin(x, y);
+        // TODO: Pins. What is common among all pins and make functions for those.
+    // int dx = (pieceToKingDiff.first > 0) - (pieceToKingDiff.first < 0);
+    // int dy = (pieceToKingDiff.second > 0) - (pieceToKingDiff.second < 0);
+    // int isPinned = 0;
     int dxKnight[] = {-2, -1, 1, 2, 2, 1, -1, -2};
     int dyKnight[] = {1, 2, 2, 1, -1, -2, -2, -1};
     switch (piece.type) {
         case EMPTY:
             throw invalid_argument("MoveError: getValidMoves called on an empty square\n");
+
         case KING:
             for (int i = -1; i <= 1; i++) {
                 for (int j = -1; j <= 1; j++) {
@@ -185,58 +249,14 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
                 }
             }
             break;
-        case KNIGHT:
-            // This pin code for the knight and rook (which needs to be added for other pieces)
-            // should be migrates into a seperate file called move.cpp and it needs to be split into helper functions 
 
-            // Check for possibility of a pin (a ray from this piece to same color king)
-            // -------------------------------------------------------------------------
-            isPinned = 0;
+        case KNIGHT:
             if (verbose) {
                 cout << "KNIGHT at (x, y): " << x << ", " << y << endl;
             }
-            // 1. Find the king
-            pieceToKingDiff = diffToKing(x, y);
 
-            // 2. Check if pieceToKingDiff is an actual line on the chess board
-            if (pieceToKingDiff.first != 0 && pieceToKingDiff.second != 0 
-                && abs(pieceToKingDiff.first) != abs(pieceToKingDiff.second)) {
-                // There is no possible pin, any direction is possible
-                validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-            } else {// Pin is possible along pieceToKingDiff
-                // 3. Iterate down -pieceToKingDirection and check if there is a piece that can pin
-                // (queen or rook if pieceToKingDirection is horizontal or vertical and queen or bishop otherwise)
-
-                int dx = (pieceToKingDiff.first > 0) - (pieceToKingDiff.first < 0);
-                int dy = (pieceToKingDiff.second > 0) - (pieceToKingDiff.second < 0);
-                
-                // But first, let's look in direction to king for obstructing pieces
-                int newX = x + dx;
-                int newY = y + dy;
-                while (isMoveInBounds(newX, newY) && board[newX][newY].type == EMPTY) {
-                    newX += dx;
-                    newY += dy;
-                }
-                if (board[newX][newY].color != piece.color || board[newX][newY].type != KING) {
-                    // Then the pin is obstructed
-                    validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-                } else { // Check for a piece that can pin
-                    newX = x - dx;
-                    newY = y - dy;
-                    while (isMoveInBounds(newX, newY) && board[newX][newY].color != piece.color) {
-                        if (board[newX][newY].type != EMPTY) {
-                            if (board[newX][newY].type == QUEEN || (board[newX][newY].type == ROOK && (dx == 0 || dy == 0)) || (board[newX][newY].type == BISHOP && (dx != 0 && dy != 0))) {
-                                isPinned = 1;
-                            } else {// The pin is obstructed
-                                break;
-                            }
-                        }
-                        newX -= dx;
-                        newY -= dy;
-                    }
-                }
-            }
-            if (!isPinned) {
+            if (pinningPieceLocation.first == -1) {
+                // No pin exists
                 for (int i = 0; i < 8; i++) {
                     int newX = x + dxKnight[i];
                     int newY = y + dyKnight[i];
@@ -244,66 +264,23 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
                         moves.push_back({newX, newY});
                     }
                 }
-            } else {
+            } else { 
+                // Pin exists
                 moves = {};
             }
             break;
+
         case ROOK:
             if (verbose) {
                 cout << "ROOK at (x, y): " << x << ", " << y << endl;
             }
-            // Check for possibility of a pin (a ray from this piece to same color king)
-            // -------------------------------------------------------------------------
-            validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-            // 1. Find the king
-            pieceToKingDiff = diffToKing(x, y);
-
-            // 2. Check if pieceToKingDiff is an actual line on the chess board
-            if (pieceToKingDiff.first != 0 && pieceToKingDiff.second != 0
-                && abs(pieceToKingDiff.first) != abs(pieceToKingDiff.second)) {
-                // There is no possible pin, any direction is possible
+            if (pinningPieceLocation.first == -1) {// No pin exists
                 validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-            } else {// Pin is possible along pieceToKingDiff
-                // 3. Iterate down -pieceToKingDirection and check if there is a piece that can pin
-                // (queen or rook if pieceToKingDirection is horizontal or vertical and queen or bishop otherwise)
-
+            } else {// Pin exists
                 int dx = (pieceToKingDiff.first > 0) - (pieceToKingDiff.first < 0);
                 int dy = (pieceToKingDiff.second > 0) - (pieceToKingDiff.second < 0);
-
-                // But first, let's look in direction to king for obstructing pieces
-                int newX = x + dx;
-                int newY = y + dy;
-                while (isMoveInBounds(newX, newY) && board[newX][newY].type == EMPTY) {
-                    newX += dx;
-                    newY += dy;
-                }
-                if (board[newX][newY].color != piece.color || board[newX][newY].type != KING) {
-                    // Then the pin is obstructed
-                    validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-                } else { // Check for a piece that can pin
-                    newX = x - dx;
-                    newY = y - dy;
-                    while (isMoveInBounds(newX, newY) && board[newX][newY].color != piece.color) {
-                        if (board[newX][newY].type != EMPTY) {
-                            if (board[newX][newY].type == QUEEN || (board[newX][newY].type == ROOK && (dx == 0 || dy == 0)) || (board[newX][newY].type == BISHOP && (dx != 0 && dy != 0))) {
-                                // Then the rook can only move towards the queen or rook, and if it's on a diagonal then it cannot move
-                                if (dx == 0 || dy == 0) {
-                                    validDirections = {{dx, dy}, {-dx, -dy}};
-                                    break;
-                                } else {
-                                    validDirections = {};
-                                    break;
-                                }
-                                break;
-                            }
-                            break;
-                        }
-                        newX -= dx;
-                        newY -= dy;
-                    }
-                }
+                validDirections = {{dx, dy}, {-dx, -dy}};
             }
-
             for (auto direction : validDirections) {
                 int dx = direction.first;
                 int dy = direction.second;
@@ -326,6 +303,7 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
                 }
             }
             break;
+
         case BISHOP:
             if (verbose) {
                 cout << "BISHOP at (x, y): " << x << ", " << y << endl;
@@ -349,6 +327,7 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
                 }
             }
             break;
+
         case QUEEN:
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dy = -1; dy <= 1; dy++) {
@@ -365,49 +344,92 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
                 }
             }
             break;
+
         case PAWN:
-            // en passant check
-            if (x == 3 && board[x][y].color == 1) {
-                if (y > 0 && board[x][y - 1].enPassant) {
-                    moves.push_back({x - 1, y - 1});
+            if (pinningPieceLocation.first == -1) {// No pin exists
+                // en passant check
+                if (x == 3 && piece.color == 1) {
+                    if (y > 0 && board[x][y - 1].enPassant) {
+                        moves.push_back({x - 1, y - 1});
+                    }
+                    if (y < 7 && board[x][y + 1].enPassant) {
+                        moves.push_back({x - 1, y + 1});
+                    }
+                } else if (x == 4 && piece.color == -1) {
+                    if (y > 0 && board[x][y - 1].enPassant) {
+                        moves.push_back({x + 1, y - 1});
+                    }
+                    if (y < 7 &&  board[x][y + 1].enPassant) {
+                        moves.push_back({x + 1, y + 1});
+                    }
                 }
-                if (y < 7 && board[x][y + 1].enPassant) {
-                    moves.push_back({x - 1, y + 1});
+                if (piece.color == 1) {
+                    if (isMoveInBounds(x - 1, y) && board[x - 1][y].type == EMPTY) {
+                        moves.push_back({x - 1, y});
+                    }
+                    if (x == 6 && board[x - 1][y].type == EMPTY && board[x - 2][y].type == EMPTY) {
+                        moves.push_back({x - 2, y});
+                    }
+                    if (isMoveInBounds(x - 1, y - 1) && board[x - 1][y - 1].color == -1) {
+                        moves.push_back({x - 1, y - 1});
+                    }
+                    if (isMoveInBounds(x - 1, y + 1) && board[x - 1][y + 1].color == -1) {
+                        moves.push_back({x - 1, y + 1});
+                    }
+                } else {
+                    if (isMoveInBounds(x + 1, y) && board[x + 1][y].type == EMPTY) {
+                        moves.push_back({x + 1, y});
+                    }
+                    if (x == 1 && board[x + 1][y].type == EMPTY && board[x + 2][y].type == EMPTY) {
+                        moves.push_back({x + 2, y});
+                    }
+                    if (isMoveInBounds(x + 1, y - 1) && board[x + 1][y - 1].color == 1) {
+                        moves.push_back({x + 1, y - 1});
+                    }
+                    if (isMoveInBounds(x + 1, y + 1) && board[x + 1][y + 1].color == 1) {
+                        moves.push_back({x + 1, y + 1});
+                    }
                 }
-            } else if (x == 4 && board[x][y].color == -1) {
-                if (y > 0 && board[x][y - 1].enPassant) {
-                    moves.push_back({x + 1, y - 1});
+            } else {// Pin exists
+                // If pinned from side then cannot move
+                if (y == pinningPieceLocation.second) {
+                    moves = {};
+                } 
+                // If pinned from diagonal then can only capture pinning piece
+                else if (pinningPieceLocation.first - x != 0 && pinningPieceLocation.second - y != 0) {
+                    moves.push_back(pinningPieceLocation);
                 }
-                if (y < 7 &&  board[x][y + 1].enPassant) {
-                    moves.push_back({x + 1, y + 1});
+                // Else it's a vertical pin
+                else {
+                    if (piece.color == 1) {
+                        if (isMoveInBounds(x - 1, y) && board[x - 1][y].type == EMPTY) {
+                            moves.push_back({x - 1, y});
+                        }
+                        if (x == 6 && board[x - 1][y].type == EMPTY && board[x - 2][y].type == EMPTY) {
+                            moves.push_back({x - 2, y});
+                        }
+                        if (isMoveInBounds(x - 1, y - 1) && board[x - 1][y - 1].color == -1) {
+                            moves.push_back({x - 1, y - 1});
+                        }
+                        if (isMoveInBounds(x - 1, y + 1) && board[x - 1][y + 1].color == -1) {
+                            moves.push_back({x - 1, y + 1});
+                        }
+                    } else {
+                        if (isMoveInBounds(x + 1, y) && board[x + 1][y].type == EMPTY) {
+                            moves.push_back({x + 1, y});
+                        }
+                        if (x == 1 && board[x + 1][y].type == EMPTY && board[x + 2][y].type == EMPTY) {
+                            moves.push_back({x + 2, y});
+                        }
+                        if (isMoveInBounds(x + 1, y - 1) && board[x + 1][y - 1].color == 1) {
+                            moves.push_back({x + 1, y - 1});
+                        }
+                        if (isMoveInBounds(x + 1, y + 1) && board[x + 1][y + 1].color == 1) {
+                            moves.push_back({x + 1, y + 1});
+                        }
+                    }
                 }
-            }
-            if (piece.color == 1) {
-                if (isMoveInBounds(x - 1, y) && board[x - 1][y].type == EMPTY) {
-                    moves.push_back({x - 1, y});
-                }
-                if (x == 6 && board[x - 1][y].type == EMPTY && board[x - 2][y].type == EMPTY) {
-                    moves.push_back({x - 2, y});
-                }
-                if (isMoveInBounds(x - 1, y - 1) && board[x - 1][y - 1].color == -1) {
-                    moves.push_back({x - 1, y - 1});
-                }
-                if (isMoveInBounds(x - 1, y + 1) && board[x - 1][y + 1].color == -1) {
-                    moves.push_back({x - 1, y + 1});
-                }
-            } else {
-                if (isMoveInBounds(x + 1, y) && board[x + 1][y].type == EMPTY) {
-                    moves.push_back({x + 1, y});
-                }
-                if (x == 1 && board[x + 1][y].type == EMPTY && board[x + 2][y].type == EMPTY) {
-                    moves.push_back({x + 2, y});
-                }
-                if (isMoveInBounds(x + 1, y - 1) && board[x + 1][y - 1].color == 1) {
-                    moves.push_back({x + 1, y - 1});
-                }
-                if (isMoveInBounds(x + 1, y + 1) && board[x + 1][y + 1].color == 1) {
-                    moves.push_back({x + 1, y + 1});
-                }
+                
             }
             break;
     }
@@ -484,7 +506,7 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
         cout << "sanToIndices(" << san << ")" << endl;
         cout << "Turn: " << turn << endl;
     }
-
+    
     map<char, int> fileToCol = {{'a', 0}, {'b', 1}, {'c', 2}, {'d', 3}, {'e', 4}, {'f', 5}, {'g', 6}, {'h', 7}};
     int isCheck = 0;
     if (san.back() == '+') {// this condition is modifies san, needs to be at top
@@ -677,12 +699,9 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
         // Check if ambiguity is along column (san[1] in {a-h})
         //                             or row (san[1] in {0-7})
         if (san[1] >= '1' && san[1] <= '8') {
-            cout << "Working thus far: " << piece << endl;
             int fromRow = 8 - (san[1] - '0');
             for (int k = 0; k < 8; k++) {
-                cout << k << " " << fromRow << " : " << board[fromRow][k].type << " " << board[fromRow][k].color << endl;
                 if (board[fromRow][k].type == piece && board[fromRow][k].color == turn) {
-                    
                     vector<pair<int, int>> validMoves = getValidMoves(fromRow, k);
                     if (find(validMoves.begin(), validMoves.end(), make_pair(destRow, destCol)) != validMoves.end()) {
                         return make_pair(make_pair(fromRow, k), make_pair(destRow, destCol));
