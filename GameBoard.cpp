@@ -14,6 +14,10 @@ void GameBoard::reset() {
     vecBoard.start();
 }
 
+void GameBoard::load() {
+    vecBoard.load();
+}
+
 void GameBoard::print() {
     vecBoard.print();
 }

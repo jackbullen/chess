@@ -1,7 +1,7 @@
 cc_library(
     name = "vecboard",
-    srcs = ["VecBoard.cpp"],
-    hdrs = ["VecBoard.h", "Piece.h"],
+    srcs = ["GameBoard.cpp", "VecBoard.cpp"],
+    hdrs = ["GameBoard.h", "VecBoard.h", "Piece.h"],
 )
 
 cc_test(

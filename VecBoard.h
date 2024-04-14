@@ -24,6 +24,7 @@ class VecBoard {
 
     // Modifies VecBoard
     void start();
+    void load();
     void forceMove(int fromX, int fromY, int toX, int toY);
 
     void move(string sanMove);

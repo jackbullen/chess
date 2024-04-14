@@ -41,6 +41,8 @@ void VecBoard::start() {
     turn = 1;
 }
 
+void VecBoard::load() {}
+
 // Moves a piece from (fromX, fromY) to (toX, toY)
 void VecBoard::forceMove(int fromX, int fromY, int toX, int toY) {
     board[toX][toY] = board[fromX][fromY];
@@ -177,7 +179,7 @@ pair<int, int> VecBoard::checkPin(int x, int y) {
             newY = y - dy;
             while (isMoveInBounds(newX, newY) && board[newX][newY].color != piece.color) {
                 if (board[newX][newY].type != EMPTY) {
-                    if (board[newX][newY].type == QUEEN || (board[newX][newY].type == ROOK && (dx == 0 || dy == 0)) || (board[newX][newY].type == BISHOP && (dx != 0 && dy != 0))) {
+                    if (board[newX][newY].type == QUEEN || (board[newX][newY].type == ROOK && (dx == 0 || dy == 0)) || ((board[newX][newY].type == QUEEN || board[newX][newY].type == BISHOP) && (dx != 0 && dy != 0))) {
                         // Pin exists because of piece at (newX, newY)
                         pinningPieceLocation = {newX, newY} ;
                     } else {// Nothing pinning, or the pin is obstructed
@@ -196,13 +198,14 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
     // Returns a vector of valid moves for a piece at position (x, y)
     Piece piece = board[x][y]; 
     vector<pair<int, int>> moves;
-    vector<pair<int, int>> validDirections;
+    
     pair<int, int> pieceToKingDiff = diffToKing(x, y);
     pair<int, int> pinningPieceLocation = checkPin(x, y);
         // TODO: Pins. What is common among all pins and make functions for those.
     // int dx = (pieceToKingDiff.first > 0) - (pieceToKingDiff.first < 0);
     // int dy = (pieceToKingDiff.second > 0) - (pieceToKingDiff.second < 0);
     // int isPinned = 0;
+    vector<pair<int, int>> validDirections;
     int dxKnight[] = {-2, -1, 1, 2, 2, 1, -1, -2};
     int dyKnight[] = {1, 2, 2, 1, -1, -2, -2, -1};
     switch (piece.type) {
@@ -274,13 +277,58 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
             if (verbose) {
                 cout << "ROOK at (x, y): " << x << ", " << y << endl;
             }
-            if (pinningPieceLocation.first == -1) {// No pin exists
+            // Check for possibility of a pin (a ray from this piece to same color king)
+            // -------------------------------------------------------------------------
+            validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+            // 1. Find the king
+            pieceToKingDiff = diffToKing(x, y);
+
+            // 2. Check if pieceToKingDiff is an actual line on the chess board
+            if (pieceToKingDiff.first != 0 && pieceToKingDiff.second != 0
+                && abs(pieceToKingDiff.first) != abs(pieceToKingDiff.second)) {
+                // There is no possible pin, any direction is possible
                 validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-            } else {// Pin exists
+            } else {// Pin is possible along pieceToKingDiff
+                // 3. Iterate down -pieceToKingDirection and check if there is a piece that can pin
+                // (queen or rook if pieceToKingDirection is horizontal or vertical and queen or bishop otherwise)
+
                 int dx = (pieceToKingDiff.first > 0) - (pieceToKingDiff.first < 0);
                 int dy = (pieceToKingDiff.second > 0) - (pieceToKingDiff.second < 0);
-                validDirections = {{dx, dy}, {-dx, -dy}};
+
+                // But first, let's look in direction to king for obstructing pieces
+                int newX = x + dx;
+                int newY = y + dy;
+                while (isMoveInBounds(newX, newY) && board[newX][newY].type == EMPTY) {
+                    newX += dx;
+                    newY += dy;
+                }
+                if (board[newX][newY].color != piece.color || board[newX][newY].type != KING) {
+                    // Then the pin is obstructed
+                    validDirections = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+                } else { // Check for a piece that can pin
+                    newX = x - dx;
+                    newY = y - dy;
+                    while (isMoveInBounds(newX, newY) && board[newX][newY].color != piece.color) {
+                        if (board[newX][newY].type != EMPTY) {
+                            if (board[newX][newY].type == QUEEN || (board[newX][newY].type == ROOK && (dx == 0 || dy == 0)) || (board[newX][newY].type == BISHOP && (dx != 0 && dy != 0))) {
+                                // Then the rook can only move towards the queen or rook, and if it's on a diagonal then it cannot move
+                                if (dx == 0 || dy == 0) {
+                                    validDirections = {{dx, dy}, {-dx, -dy}};
+                                    break;
+                                } else {
+                                    validDirections = {};
+                                    break;
+                                }
+                                break;
+                            }
+                            break;
+                        }
+                        newX -= dx;
+                        newY -= dy;
+                    }
+                }
             }
+
             for (auto direction : validDirections) {
                 int dx = direction.first;
                 int dy = direction.second;
@@ -396,7 +444,7 @@ vector<pair<int, int>> VecBoard::getValidMoves(int x, int y) {
                     moves = {};
                 } 
                 // If pinned from diagonal then can only capture pinning piece
-                else if (pinningPieceLocation.first - x != 0 && pinningPieceLocation.second - y != 0) {
+                else if (pinningPieceLocation.first - x == 0 && pinningPieceLocation.second - y == 0) {
                     moves.push_back(pinningPieceLocation);
                 }
                 // Else it's a vertical pin
