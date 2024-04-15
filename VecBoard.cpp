@@ -7,12 +7,12 @@ using namespace std;
 const int VecBoard::BOARD_SIZE = 8;
 
 VecBoard::VecBoard() : turn(1) {
+    board.resize(BOARD_SIZE, vector<Piece>(BOARD_SIZE, Piece(EMPTY, 0, 0)));
     start();
 }
 
 // Sets the board to the starting position
 void VecBoard::start() {
-    board.resize(BOARD_SIZE, vector<Piece>(BOARD_SIZE, Piece(EMPTY, 0, 0)));
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
             board[i][j] = Piece(EMPTY, 0, 0);
@@ -89,6 +89,10 @@ void VecBoard::load(string fen) {
     }    
 }
 
+void VecBoard::prev() {}
+
+void VecBoard::next() {}
+
 // Moves a piece from (fromX, fromY) to (toX, toY)
 void VecBoard::forceMove(int fromX, int fromY, int toX, int toY) {
     board[toX][toY] = board[fromX][fromY];
@@ -144,7 +148,7 @@ void VecBoard::move(string sanMove) {
         board[fromX][fromY] = Piece(promotionType, turn, 9); 
     }
 
-    // If en passant, remove the capture pawn
+    // If en passant, remove the captured pawn
     if (board[fromX][fromY].type == PAWN && fromY != toY && board[toX][toY].type == EMPTY) {
         board[toX + turn][toY] = Piece(EMPTY, 0, 0);
     }

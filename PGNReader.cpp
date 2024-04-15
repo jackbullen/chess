@@ -8,9 +8,10 @@ PGNReader::PGNReader(const string& filename) : file(filename) {
     }
 }
 
-PGNReader::Game PGNReader::parseGame() {
+GameBoard PGNReader::parseGame() {
     string line;
     Game game;
+    GameBoard board;
 
     while (getline(file, line)) {
         if (line.empty()) continue;
@@ -54,7 +55,8 @@ PGNReader::Game PGNReader::parseGame() {
                     if (!white_move.empty()) game.moves.push_back(white_move);
                     if (!black_move.empty()) game.moves.push_back(black_move);
                 } else if (move == "1-0" || move == "0-1" || move == "1/2-1/2" || move == "*") {
-                    return game;
+                    board = printGame(game);
+                    return board;
                 } else {
                     game.moves.push_back(move);
                 }
@@ -62,7 +64,8 @@ PGNReader::Game PGNReader::parseGame() {
             }
         }
     }
-    return game;
+    board = printGame(game);
+    return board;
 }
 
 GameBoard PGNReader::printGame(const Game& game) {

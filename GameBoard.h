@@ -16,6 +16,8 @@ class GameBoard {
     Piece getPiece(int x, int y);
     vector<pair<int, int>> getValidMoves(int x, int y);
     string loc(int x, int y);
+    int eval();
+    
     map<PieceType, string> pieceTypeNameMap = {
     {PAWN, "Pawn"},
     {ROOK, "Rook"},

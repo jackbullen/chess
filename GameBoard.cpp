@@ -33,3 +33,7 @@ vector<pair<int, int>> GameBoard::getValidMoves(int x, int y) {
 string GameBoard::loc(int x, int y) {
     return pieceTypeNameMap[vecBoard.getPiece(x, y).type];
 }
+
+int GameBoard::eval() {
+    return vecBoard.eval();
+}

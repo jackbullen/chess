@@ -30,8 +30,10 @@ class VecBoard {
     // Modifies VecBoard
     void start();
     void load(string fen);
+    void prev();
+    void next();
     void forceMove(int fromX, int fromY, int toX, int toY);
-
+    
     void move(string sanMove);
     vector<pair<int, int>> getValidMoves(int x, int y);
     pair<pair<int, int>, pair<int, int>> sanToIndices(const string& san);
