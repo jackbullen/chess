@@ -10,7 +10,7 @@ class GameBoard {
    public:
     GameBoard();
     void reset();
-    void load();
+    void load(string fen);
     void move(string san);
     void print();
     Piece getPiece(int x, int y);

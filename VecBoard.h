@@ -17,14 +17,19 @@ class VecBoard {
     int turn;
     static const int BOARD_SIZE;
     map<char, PieceType> charPieceTypeMap = {
-            {'R', ROOK},
-            {'N', KNIGHT},
-            {'B', BISHOP},
-            {'Q', QUEEN}};
-
+            {'P', PAWN}, {'p', PAWN},
+            {'R', ROOK}, {'r', ROOK},
+            {'N', KNIGHT}, {'n', KNIGHT},
+            {'B', BISHOP}, {'b', BISHOP},
+            {'Q', QUEEN}, {'q', QUEEN},
+            {'K', KING}, {'k', KING}};
+    map<PieceType, int> pieceTypeValueMap = {
+            {ROOK, 5}, {PAWN, 1},
+            {BISHOP, 3}, {KNIGHT, 3},
+            {QUEEN, 9}, {KING, 100}};
     // Modifies VecBoard
     void start();
-    void load();
+    void load(string fen);
     void forceMove(int fromX, int fromY, int toX, int toY);
 
     void move(string sanMove);

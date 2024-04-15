@@ -41,7 +41,53 @@ void VecBoard::start() {
     turn = 1;
 }
 
-void VecBoard::load() {}
+// Load the board from a FEN string
+// "rnbqkb1r/pppp1ppp/5n2/4P3/3p4/5N2/PPP2PPP/RNBQKB1R b KQkq - 0 4"
+void VecBoard::load(string fen) {
+    // Currently ignoring anything past turn indicator
+    //                    castling and en passant
+    
+    // Set turn indicator
+    char turnId = fen.substr(fen.find(' ')+1)[0];    
+    if (turnId == 'w') {
+        turn = 1;
+    } else {
+        turn = -1;
+    }
+
+    // Set pieces
+    string row;
+    string rows = fen.substr(0, fen.find(' '));
+    PieceType pieceType;
+    int pieceCol;
+    int numEmpty;
+    char curr;
+    for (int i = 0; i < 8; i++) {// loop over rows
+        row = rows.substr(0, rows.find('/'));
+        for (int j = 0; j < 8; j++) { // loop over cols
+            curr = row[0];
+            if (isdigit(curr)) {// set num empty squares
+                numEmpty = curr - '0';
+                while (numEmpty > 0) {
+                    board[i][j] = Piece(EMPTY, 0, 0);
+                    j++;
+                    numEmpty--;
+                }
+                j--; // should find a better way...
+            } else {// set pieces as specified in fen
+                if (isupper(curr)) {
+                    pieceCol = 1;
+                } else {
+                    pieceCol = -1;
+                }
+                pieceType = charPieceTypeMap[curr];
+                board[i][j] = Piece(pieceType, pieceCol, pieceTypeValueMap[pieceType]);
+            }
+            row = row.substr(1);
+        }
+        rows = rows.substr(rows.find('/')+1);
+    }    
+}
 
 // Moves a piece from (fromX, fromY) to (toX, toY)
 void VecBoard::forceMove(int fromX, int fromY, int toX, int toY) {

@@ -14,8 +14,8 @@ void GameBoard::reset() {
     vecBoard.start();
 }
 
-void GameBoard::load() {
-    vecBoard.load();
+void GameBoard::load(string fen) {
+    vecBoard.load(fen);
 }
 
 void GameBoard::print() {
