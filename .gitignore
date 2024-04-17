@@ -1,5 +1,4 @@
 .vscode
 .DS_Store
 *bazel*
-games.pgn
 DECISIONS.md

@@ -1,5 +1,6 @@
 #include "VecBoard.h"
 
+#include <algorithm>
 #include <iostream>
 #include <map>
 
@@ -822,4 +823,8 @@ pair<pair<int, int>, pair<int, int>> VecBoard::sanToIndices(const string& sanIn)
 
     cout << "WARNING: Invalid move attempted: " << san << endl;
     return make_pair(make_pair(-1, -1), make_pair(-1, -1));  // Return invalid pairs if no valid move is found
+}
+
+int VecBoard::eval() {
+    return 0;
 }

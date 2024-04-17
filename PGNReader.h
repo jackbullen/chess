@@ -4,7 +4,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
+#include <algorithm>
 #include "GameBoard.h"
 #include "VecBoard.h"
 
@@ -14,7 +14,7 @@ class PGNReader {
    public:
     struct Game {
         string event;
-        string site;
+        string site;    
         string date;
         string round;
         string white;

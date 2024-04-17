@@ -50,6 +50,8 @@ class VecBoard {
     Piece getPiece(int x, int y) const {
         return board[x][y];
     }
+
+    int eval();
 };
 
 #endif
