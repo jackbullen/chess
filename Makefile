@@ -3,7 +3,7 @@ TEST_FILES := $(wildcard tests*.cpp)
 SOURCE_FILES := $(filter-out $(TEST_FILES), $(CPP_FILES))
 
 default:
-	/usr/bin/clang++ -g -std=gnu++14 $(SOURCE_FILES) -o ./chess
+	/usr/bin/clang++ -g -Wall -Wextra -pedantic -std=gnu++14 $(SOURCE_FILES) -o ./chess
 
 fed:
 	g++ -g $(SOURCE_FILES) -o ./chess
