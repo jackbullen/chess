@@ -1,8 +1,12 @@
+CPP_FILES := $(wildcard *.cpp)
+TEST_FILES := $(wildcard tests*.cpp)
+SOURCE_FILES := $(filter-out $(TEST_FILES), $(CPP_FILES))
+
 default:
-	/usr/bin/clang++ -std=gnu++14 -stdlib=libc++ -g $(shell find . -name "*.cpp" ! -name "test*") -o ./chess
+	/usr/bin/clang++ -g $(SOURCE_FILES) -o ./chess
 
 fed:
-	g++ -std=gnu++14 -g $(shell find . -name "*.cpp" ! -name "test*") -o ./chess
+	g++ -g $(SOURCE_FILES) -o ./chess
 
 test:
 	bazel test --cxxopt=-std=c++14 --test_output=all //:vecboard_test
